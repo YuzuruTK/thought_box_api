@@ -1,0 +1,14 @@
+-- SQL script to create tables for Thought Box API
+
+CREATE TABLE IF NOT EXISTS boxes (
+    box_id SERIAL PRIMARY KEY,
+    name VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS thoughts (
+    id SERIAL PRIMARY KEY,
+    box_id INTEGER NOT NULL REFERENCES boxes(box_id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
