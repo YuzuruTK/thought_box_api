@@ -1,29 +1,29 @@
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.db
-*.sqlite3
-.venv
+# Dependencies
+node_modules/
+
+# Wrangler / Cloudflare
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Build output
+dist/
 
 # Environment
 .env
-
-# Docker
-/data/
-
-# VS Code
-.vscode/
-
-# OS
-.DS_Store
-Thumbs.db
+.env.*
+!.env.example
 
 # Logs
 *.log
+npm-debug.log*
 
-# Others
-*.egg-info/
-build/
-dist/
+# Editor
+.vscode/
+.idea/
+.DS_Store
+
+# Legacy (Python/Docker era)
+data/
+__pycache__/
+.venv/

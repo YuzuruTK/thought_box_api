@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "thought-box-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-06-01",
+  // D1 database binding.
+  // Create the database with:
+  //   npx wrangler d1 create thought_box_db
+  // then paste the returned database_id below.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "thought_box_db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "migrations_dir": "drizzle"
+    }
+  ],
+  // JWT signing secret. Set with:
+  //   npx wrangler secret put JWT_SECRET
+  // OpenRouter API key. Set with:
+  //   npx wrangler secret put OPENROUTER_API_KEY
+  // For local development, put secrets in `.dev.vars` (see `.dev.vars.example`).
+  "vars": {
+    // OpenRouter model used for AI generation (configurable, not hardcoded).
+    "AI_MODEL": "google/gemma-3-27b-it:free"
+  }
+}
