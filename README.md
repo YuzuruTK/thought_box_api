@@ -1,6 +1,6 @@
-# Thought Box API
+# Thought Box
 
-An AI-powered second brain API running on **Cloudflare Workers**, built with **Hono**, **Drizzle ORM**, and **D1** (SQLite at the edge).
+An AI-powered second brain running on **Cloudflare Workers**, built with **Hono**, **Drizzle ORM**, and **D1** (SQLite at the edge) — now with a built-in **React web client** served from the same Worker.
 
 Thought Box lets users collect small thoughts into **Boxes** and uses AI (via OpenRouter) to transform them into structured documents:
 
@@ -14,6 +14,7 @@ User
 
 ## Features
 
+- **Web client** — register/login, manage boxes, rapid thought capture (type + Enter), and read AI-generated summaries & documents, all in one place
 - **Users** with email/password registration and JWT login (bearer tokens)
 - **Thoughts** with full CRUD, rich metadata (`ai_title`, `ai_summary` placeholders), and `created_at`/`updated_at`
 - **Boxes** — user-scoped containers for thoughts (e.g. "Protein TCC", "ESP32 Jarvis")
@@ -29,12 +30,18 @@ User
 | Layer      | Technology                          |
 | ---------- | ----------------------------------- |
 | Runtime    | Cloudflare Workers                  |
-| Framework  | Hono                                |
+| API        | Hono                                |
+| Frontend   | React 19 + Vite + Tailwind CSS v4   |
+| Client state | TanStack Query + React Router     |
+| Markdown   | react-markdown + remark-gfm         |
 | Database   | Cloudflare D1 (SQLite)              |
 | ORM        | Drizzle ORM + drizzle-kit           |
 | Validation | Zod (`@hono/zod-validator`)         |
 | Auth       | JWT (HS256) + PBKDF2 password hashing |
 | AI         | OpenRouter (`/api/v1/chat/completions`) |
+
+The frontend is bundled by Vite into `client/dist` and served as **Workers Static Assets** from the same Worker as the API. All API endpoints live under `/api/*`; every other path falls back to `index.html` (single-page application). See the `assets` block in `wrangler.jsonc`.
+
 
 ## Setup
 
@@ -78,7 +85,7 @@ npx wrangler secret put OPENROUTER_API_KEY
 
 ### 4. Configure the AI model (optional)
 
-The model is configurable via the `AI_MODEL` variable in `wrangler.jsonc` (default: `google/gemma-3-27b-it:free`). Any OpenRouter model id works, e.g. `openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`.
+The model is configurable via the `AI_MODEL` variable in `wrangler.jsonc` (current default: `openrouter/free`, OpenRouter's auto-router over free models). Any OpenRouter model id works, e.g. `google/gemma-4-31b-it:free`, `openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`. Check [available models](https://openrouter.ai/models) — free models rotate over time.
 
 ### 5. Apply database migrations
 
@@ -93,85 +100,109 @@ npm run db:migrate:remote
 ### 6. Run locally
 
 ```bash
-npm run dev
+# API + built web client (http://localhost:8787)
+npm run dev:api
+
+# Web client with hot reload (http://localhost:5173, proxies /api to :8787)
+npm run dev:web
 ```
 
-The API is available at `http://localhost:8787`.
+Run both commands in separate terminals during development.
 
 ### 7. Deploy
 
 ```bash
-npm run deploy
+npm run deploy   # builds client/dist and deploys Worker + assets
 ```
+
+## Web Client
+
+The UI lives in `client/` (React 19 + Vite + TypeScript + Tailwind CSS v4).
+
+```bash
+cd client
+npm install
+npm run dev        # dev server with /api proxy
+npm run build      # typecheck + production build to dist/
+npm run typecheck
+```
+
+What it covers:
+
+- **Login page** (`/login`) — register or log in; JWT stored in `localStorage` and attached as a Bearer token to every request; unauthenticated users are redirected to `/login`
+- **Main app** (`/app`, `/app/box/:id`) — sidebar with your boxes (create inline with "+ New Box", delete with ✕), main pane with **Thoughts | Summary | Document** tabs
+- **Fast thought capture** — type a thought, press Enter: it's created optimistically, the input clears and keeps focus for the next idea
+- **Summary / Document tabs** — Generate/Regenerate buttons (disabled while running), markdown rendering of cached results
 
 ## API Reference
 
-All endpoints except `/` and `/auth/*` require an `Authorization: Bearer <token>` header (obtained from `POST /auth/login`).
+All endpoints under `/api/*` except `/api/auth/*` require an `Authorization: Bearer <token>` header (obtained from `POST /api/auth/login`). Static assets and SPA routes are served for everything outside `/api/*`.
 
 ### Health Check
 
-- `GET /` — returns API status.
+- `GET /api/` — returns API status.
 
 ### Auth
 
-- `POST /auth/register`
+- `POST /api/auth/register`
   - Body: `{ "email": string, "password": string }` (password ≥ 8 chars)
   - Response `201`: `{ "id": number, "email": string, "createdAt": string }`
   - Errors: `409` email already registered, `400` validation failure.
 
-- `POST /auth/login`
+- `POST /api/auth/login`
   - Body: `{ "email": string, "password": string }`
   - Response `200`: `{ "token": string, "tokenType": "Bearer", "userId": number }` (token valid for 24h)
   - Errors: `401` invalid credentials.
 
 ### Thoughts
 
-- `POST /thoughts`
+- `POST /api/thoughts`
   - Body: `{ "content": string, "tagIds"?: number[], "boxIds"?: number[] }`
   - Response `201`: created thought (with `tags` and `boxes`).
   - Errors: `404` referenced tag/box does not exist.
 
-- `GET /thoughts`
+- `GET /api/thoughts`
   - Query: `tagId?`, `boxId?`, `limit?` (1–100, default 20), `offset?` (default 0)
-  - Response `200`: `{ "thoughts": [...] }`
+  - Response `200`: `{ "thoughts": [...] }` (newest first)
 
-- `GET /thoughts/{id}` — Response `200`: thought with tags and boxes. Errors: `404`.
+- `GET /api/thoughts/{id}` — Response `200`: thought with tags and boxes. Errors: `404`.
 
-- `PATCH /thoughts/{id}`
+- `PATCH /api/thoughts/{id}`
   - Body: any of `{ "content"?, "tagIds"?, "boxIds"? }` (at least one field)
   - Response `200`: updated thought. Errors: `404`.
 
-- `DELETE /thoughts/{id}` — Response `204`. Errors: `404`.
+- `DELETE /api/thoughts/{id}` — Response `204`. Errors: `404`.
 
 ### Tags
 
-- `POST /tags` — Body: `{ "name": string }`. Response `201`. Errors: `409` duplicate.
-- `GET /tags` — Response `200`: `{ "tags": [...] }`
+- `POST /api/tags` — Body: `{ "name": string }`. Response `201`. Errors: `409` duplicate.
+- `GET /api/tags` — Response `200`: `{ "tags": [...] }`
 
 ### Boxes
 
-- `POST /boxes` — Body: `{ "name": string, "description"?: string }`. Response `201`.
-- `GET /boxes` — Response `200`: `{ "boxes": [...] }` (scoped to the authenticated user)
+- `POST /api/boxes` — Body: `{ "name": string, "description"?: string }`. Response `201`.
+- `GET /api/boxes` — Response `200`: `{ "boxes": [...] }` (scoped to the authenticated user)
+- `DELETE /api/boxes/{id}` — Response `204`; cascades the box's thought links and generated documents. Errors: `404`.
 
 ### AI Generation
 
-- `POST /boxes/{id}/generate-summary`
+- `POST /api/boxes/{id}/generate-summary`
   - Loads every thought in the box, sends them to OpenRouter, and generates a concise structured markdown summary (sections: Overview, Main Ideas, Important Concepts, Open Questions).
   - The result is **cached** in `generated_documents` — regenerating updates the cached summary in place.
   - Response `201`: the generated document (see shape below).
   - Errors: `404` box not found, `400` box has no thoughts, `502` AI provider error, `504` AI timeout.
 
-- `POST /boxes/{id}/generate-document`
+- `POST /api/boxes/{id}/generate-document`
   - Loads all thoughts plus the latest cached summary (generating a summary first if none exists) and produces a complete professional document (type inferred from content: GDD, Research Summary, Product Specification, Technical Architecture, Story Outline...).
   - The result is **cached** and updated in place on regeneration.
   - Response `201`: the generated document.
   - Errors: same as generate-summary.
 
-- `GET /boxes/{id}/documents`
+- `GET /api/boxes/{id}/documents`
   - Returns the cached summary and/or document for the box.
   - Response `200`: `{ "documents": [...] }`. Errors: `404` box not found.
 
-- `GET /documents/{id}`
+- `GET /api/documents/{id}`
   - Fetches a single generated document by id.
   - Response `200`: the document. Errors: `404`.
 
@@ -233,11 +264,36 @@ npm run db:migrate
 npm run db:migrate:remote
 ```
 
+## Development
+
+```bash
+npm run dev:api      # wrangler dev (local Workers runtime, serves API + built assets)
+npm run dev:web      # Vite dev server with hot reload (proxies /api to :8787)
+npm run build        # build the web client to client/dist
+npm run typecheck    # tsc --noEmit (backend)
+npm run db:generate  # generate migrations from schema changes
+```
+
 ## Project Structure
 
 ```text
+client/                      # React + Vite web client
+├── index.html
+├── vite.config.ts           # React + Tailwind plugins, /api dev proxy
+└── src/
+    ├── pages/               # LoginPage, AppPage (two-pane layout)
+    ├── components/          # Shared feedback components (banners, empty states)
+    ├── features/
+    │   ├── auth/            # AuthContext (JWT session), login/register logic
+    │   ├── boxes/           # Sidebar: box list, create, delete
+    │   ├── thoughts/        # Thought list + fast-entry input (Enter to add)
+    │   └── documents/       # Summary/Document tabs, generation, markdown view
+    ├── hooks/               # TanStack Query hooks (boxes, thoughts, documents)
+    ├── services/api.ts      # Fetch wrapper: Bearer token, typed endpoints, errors
+    ├── lib/                 # Error messages, markdown renderer
+    └── routes/              # ProtectedRoute (auth guard)
 src/
-├── index.ts                 # Hono app entry (middleware, routes, error handling)
+├── index.ts                 # Hono app entry (middleware, /api routes, error handling)
 ├── env.ts                   # Worker bindings typing (DB, JWT_SECRET, OPENROUTER_API_KEY, AI_MODEL)
 ├── db/
 │   ├── schema.ts            # Drizzle schema (users, thoughts, tags, boxes, M2M, generated_documents)
@@ -259,14 +315,6 @@ src/
 │   ├── userService.ts       # Registration / credential verification
 │   └── errors.ts            # Domain errors
 └── routes/                  # HTTP route handlers (auth, thoughts, tags, boxes, documents)
-```
-
-## Development
-
-```bash
-npm run dev         # wrangler dev (local Workers runtime)
-npm run typecheck   # tsc --noEmit
-npm run db:generate # generate migrations from schema changes
 ```
 
 ## Roadmap

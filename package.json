@@ -5,11 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev:api": "wrangler dev",
+    "dev:web": "npm --prefix client run dev",
+    "build": "npm --prefix client run build",
+    "deploy": "npm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply thought_box_db --local",
     "db:migrate:remote": "wrangler d1 migrations apply thought_box_db --remote",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:web": "npm --prefix client run typecheck"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260820.1",

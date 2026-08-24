@@ -33,6 +33,12 @@ export class BoxService {
       .orderBy(asc(boxes.name));
   }
 
+  /** Delete a box owned by the user, or throw NotFoundError. Cascades via FKs. */
+  async delete(userId: number, boxId: number): Promise<void> {
+    await this.getOwned(userId, boxId);
+    await this.db.delete(boxes).where(and(eq(boxes.id, boxId), eq(boxes.userId, userId)));
+  }
+
   /** Fetch a box owned by the user, or throw NotFoundError. */
   async getOwned(userId: number, boxId: number): Promise<Box> {
     const [box] = await this.db

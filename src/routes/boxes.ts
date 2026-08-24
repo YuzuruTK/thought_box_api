@@ -85,6 +85,24 @@ boxes.get("/", async (c) => {
   });
 });
 
+boxes.delete("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = parseId(c.req.param("id"));
+  if (id === null) {
+    return c.json({ error: "Invalid box id." }, 400);
+  }
+  try {
+    const service = new BoxService(getDb(c.env));
+    await service.delete(userId, id);
+    return c.body(null, 204);
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return c.json({ error: error.message }, 404);
+    }
+    throw error;
+  }
+});
+
 boxes.post("/:id/generate-summary", async (c) => {
   const userId = c.get("userId");
   const id = parseId(c.req.param("id"));

@@ -22,6 +22,14 @@
   // For local development, put secrets in `.dev.vars` (see `.dev.vars.example`).
   "vars": {
     // OpenRouter model used for AI generation (configurable, not hardcoded).
-    "AI_MODEL": "google/gemma-3-27b-it:free"
+    "AI_MODEL": "openrouter/free"
+  },
+  // Static assets for the web client (built from client/ with Vite).
+  // API paths are handled by the Worker first; every other GET request that
+  // doesn't match an asset falls back to index.html (single-page application).
+  "assets": {
+    "directory": "./client/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
   }
 }

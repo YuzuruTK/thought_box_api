@@ -18,12 +18,12 @@ app.use("*", cors());
 // Health check
 app.get("/", (c) => c.json({ status: "running", service: "thought-box-api" }));
 
-// Routes
-app.route("/auth", auth);
-app.route("/thoughts", thoughts);
-app.route("/tags", tags);
-app.route("/boxes", boxes);
-app.route("/documents", documents);
+// Routes (mounted under /api — static assets + SPA fallback own all other paths)
+app.route("/api/auth", auth);
+app.route("/api/thoughts", thoughts);
+app.route("/api/tags", tags);
+app.route("/api/boxes", boxes);
+app.route("/api/documents", documents);
 
 // 404 fallback
 app.notFound((c) => c.json({ error: "Not found." }, 404));
