@@ -1,5 +1,3 @@
-import type { Env } from "../../env";
-
 const OPENROUTER_AUTH_URL = "https://openrouter.ai/api/v1/auth/key";
 const MIN_KEY_LENGTH = 20;
 const MAX_KEY_LENGTH = 200;
@@ -44,7 +42,6 @@ export class OpenRouterKeyValidator {
       };
     }
 
-    // Live check against OpenRouter's auth/key endpoint.
     let res: Response;
     try {
       res = await fetch(OPENROUTER_AUTH_URL, {
@@ -58,7 +55,6 @@ export class OpenRouterKeyValidator {
       return { ok: false, reason: "OpenRouter rejected this key." };
     }
     if (!res.ok) {
-      // Not a clean accept; unable to verify (not necessarily invalid).
       return { ok: false, reason: "OpenRouter could not verify the key right now. Try again." };
     }
     return { ok: true, key: trimmed };
