@@ -107,6 +107,8 @@ export const generatedDocuments = sqliteTable("generated_documents", {
     .references(() => users.id, { onDelete: "cascade" }),
   /** 'summary' | 'document' */
   type: text("type").notNull(),
+  /** Which provider generated this doc: 'platform' | 'byok' | 'workers-ai' (provenance metadata). */
+  generationProvider: text("generation_provider"),
   title: text("title").notNull(),
   content: text("content").notNull(),
   model: text("model").notNull(),
@@ -118,6 +120,43 @@ export const generatedDocuments = sqliteTable("generated_documents", {
     .default(sql`(unixepoch() * 1000)`),
 }, (table) => [
   uniqueIndex("generated_documents_box_type_unique").on(table.boxId, table.type),
+]);
+
+// ---------------------------------------------------------------------------
+// Users settings — BYOK configuration (Issue #1)
+// ---------------------------------------------------------------------------
+
+/**
+ * user_settings — per-user AI configuration (Bring Your Own OpenRouter Key).
+ *
+ * API keys are stored envelope-encrypted (AES-256-GCM) with a master key held
+ * as a Worker secret (`BYOK_KEK`). Plaintext keys never touch the database.
+ */
+export const userSettings = sqliteTable("user_settings", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** Which provider generations run on: 'platform' | 'byok'. */
+  aiProvider: text("ai_provider").notNull().default("platform"),
+  /** AES-256-GCM ciphertext of the user's OpenRouter key (base64). */
+  encryptedApiKey: text("encrypted_api_key"),
+  /** 12-byte random IV used for encryption (base64). */
+  apiKeyIv: text("api_key_iv"),
+  /** Master-key version used to encrypt (enables future rotation). */
+  apiKeyVersion: integer("api_key_version"),
+  /** Masked, non-secret hint, e.g. 'sk-or-v1-…91cd'. */
+  apiKeyHint: text("api_key_hint"),
+  /** 'valid' | 'invalid' | 'revoked'. */
+  apiKeyStatus: text("api_key_status"),
+  apiKeyVerifiedAt: integer("api_key_verified_at", { mode: "timestamp_ms" }),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+  updatedAt: integer("updated_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+}, (table) => [
+  index("user_settings_user_id_idx").on(table.userId),
 ]);
 
 // ---- Inferred types -------------------------------------------------------
@@ -132,3 +171,5 @@ export type Box = typeof boxes.$inferSelect;
 export type NewBox = typeof boxes.$inferInsert;
 export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type NewGeneratedDocument = typeof generatedDocuments.$inferInsert;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type NewUserSettings = typeof userSettings.$inferInsert;
