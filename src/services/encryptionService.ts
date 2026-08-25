@@ -2,7 +2,7 @@
  * EncryptionService — envelope encryption for BYOK API keys.
  *
  * The master key (KEK) is a 32-byte base64 string stored as a Worker secret
- * (`BYOK_KEK`). Keys are encrypted with AES-256-GCM using a fresh random IV
+ * (`BYOK_KEK_V1`). Keys are encrypted with AES-256-GCM using a fresh random IV
  * per write; the KEK version tag enables future key rotation.
  *
  * Plaintext secrets exist ONLY within this module's callers and are never
@@ -27,7 +27,7 @@ export class EncryptionService {
   private readonly cryptoKey: Promise<CryptoKey>;
 
   /**
-   * @param kekBase64 32-byte key encoded as base64 (from a Worker secret).
+   * @param kekBase64 exactly 32 bytes encoded as base64 (from a Worker secret).
    * @param version Master-key version this instance encrypts with.
    */
   constructor(
@@ -36,12 +36,15 @@ export class EncryptionService {
   ) {
     let raw: Uint8Array;
     try {
-      const bytes = new Uint8Array(atob(kekBase64).split("").map((c) => c.charCodeAt(0)));
-      if (bytes.byteLength < 16 || bytes.byteLength > 64) {
-        throw new EncryptionError(`Invalid KEK length (${bytes.byteLength} bytes).`);
+      const binary = atob(kekBase64);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      if (bytes.byteLength !== 32) {
+        throw new EncryptionError(`Invalid KEK length (${bytes.byteLength} bytes); expected 32.`);
       }
       raw = bytes;
-    } catch {
+    } catch (error) {
+      if (error instanceof EncryptionError) throw error;
       throw new EncryptionError("Invalid KEK secret format.");
     }
     this.cryptoKey = crypto.subtle.importKey(
@@ -76,13 +79,11 @@ export class EncryptionService {
         fromBase64(ciphertext),
       );
       return new TextDecoder().decode(decrypted);
-    } catch (error) {
+    } catch {
       throw new EncryptionError("Failed to decrypt secret.");
     }
   }
 }
-
-// ---- base64 helpers (Worker-safe, no Buffer) ------------------------------
 
 function toBase64(bytes: Uint8Array): string {
   let binary = "";
