@@ -4,22 +4,14 @@ import { BoxService } from "../boxService";
 import { ThoughtService } from "../thoughtService";
 import { DocumentService } from "../documentService";
 import { ValidationError, CooldownError } from "../errors";
-import { chatCompletion, AiProviderError, AiTimeoutError } from "./openrouter";
+import { AiProviderError, AiTimeoutError } from "./openrouter";
 import { buildSynthesisPrompt } from "./prompts";
+import { ProviderResolver } from "./providerResolver";
 
-/** Token limit for the single blended (resume + document) request. */
 const SYNTHESIS_MAX_TOKENS = 1_000;
-
-/** Minimum time between manual syntheses (minutes). */
 const SYNTHESIS_COOLDOWN_MS = 30 * 60 * 1_000;
-
-/** Maximum number of thoughts sent to the model per generation. */
 const MAX_THOUGHTS_PER_PROMPT = 200;
 
-/**
- * Split a blended model response into the resume (plain text before the
- * first markdown H1) and the document (from the first "# heading" onwards).
- */
 interface SynthesisParts {
   resume: string;
   document: string;
@@ -29,8 +21,6 @@ interface SynthesisParts {
 function splitSynthesisContent(content: string): SynthesisParts {
   const h1Index = content.search(/^#\s+/m);
   if (h1Index === -1) {
-    // No document heading found - treat everything as the document so we
-    // never lose content; resume is left empty.
     return { resume: "", document: content.trim(), documentTitle: "Project Summary" };
   }
   const resume = content.slice(0, h1Index).trim();
@@ -43,31 +33,22 @@ function splitSynthesisContent(content: string): SynthesisParts {
   };
 }
 
-/**
- * AI generator - orchestrates thought loading, prompt building, the
- * OpenRouter call, response validation, and cache persistence.
- */
 export class AiGenerator {
   private readonly db: Database;
   private readonly boxes: BoxService;
   private readonly thoughts: ThoughtService;
   private readonly documents: DocumentService;
+  private readonly providers: ProviderResolver;
 
   constructor(private readonly env: Env) {
     this.db = getDb(env);
     this.boxes = new BoxService(this.db);
     this.thoughts = new ThoughtService(this.db);
     this.documents = new DocumentService(this.db);
+    this.providers = new ProviderResolver(env);
   }
 
-  /**
-   * Synthesize (or re-synthesize) a box: one request produces both the brief
-   * resume (stored as `summary`) and the structured document.
-   * Manual calls are rate-limited by SYNTHESIS_COOLDOWN_MS.
-   */
   async synthesize(userId: number, boxId: number): Promise<void> {
-    // Manual cooldown against the most recent regeneration of any kind
-    // (summary and document rows are always written together).
     const last = await this.documents.findLatestForBox(boxId);
     if (last) {
       const elapsed = Date.now() - last.updatedAt.getTime();
@@ -80,75 +61,59 @@ export class AiGenerator {
     }
 
     const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
-
     const prompt = buildSynthesisPrompt({
       boxName: box.name,
       boxDescription: box.description,
       thoughts: thoughtContents,
     });
 
-    const content = await this.callModel(prompt, SYNTHESIS_MAX_TOKENS);
-    const { resume, document, documentTitle } = splitSynthesisContent(content);
+    const provider = await this.providers.resolve(userId);
+    const result = await this.callProvider(provider, userId, prompt, SYNTHESIS_MAX_TOKENS);
+    const { resume, document, documentTitle } = splitSynthesisContent(result.content);
 
-    // Persist both the resume and the document from the single request.
-    const model = this.env.AI_MODEL;
-    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, model);
-    await this.documents.upsert(userId, boxId, "document", documentTitle, document, model);
+    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, result.model, result.provider);
+    await this.documents.upsert(userId, boxId, "document", documentTitle, document, result.model, result.provider);
   }
-
-  // ---- internals ----------------------------------------------------------
 
   private async loadBoxContext(userId: number, boxId: number) {
     const box = await this.boxes.getOwned(userId, boxId);
-
     const boxThoughts = await this.thoughts.listForBox(boxId);
     if (boxThoughts.length === 0) {
       throw new ValidationError("Box has no thoughts to generate from.");
     }
-
-    // Cap the number of thoughts to control prompt size / cost.
     const limited = boxThoughts.slice(0, MAX_THOUGHTS_PER_PROMPT);
-    return {
-      box,
-      thoughtContents: limited.map((thought) => thought.content),
-    };
+    return { box, thoughtContents: limited.map((thought) => thought.content) };
   }
 
-  private async callModel(prompt: string, maxTokens: number): Promise<string> {
+  private async callProvider(
+    provider: Awaited<ReturnType<ProviderResolver["resolve"]>>,
+    userId: number,
+    prompt: string,
+    maxTokens: number,
+  ) {
     try {
-      const raw = await chatCompletion({
-        apiKey: this.env.OPENROUTER_API_KEY,
-        model: this.env.AI_MODEL,
-        messages: [{ role: "user", content: prompt }],
-        maxTokens,
-      });
-      return validateMarkdown(raw);
+      const result = await provider.complete({ prompt, maxTokens });
+      return { ...result, provider: provider.kind };
     } catch (error) {
-      if (error instanceof AiTimeoutError) {
+      // Only authentication failures invalidate a BYOK key. Rate limits,
+      // provider outages and model errors must not silently disable it.
+      if (provider.kind === "byok" && error instanceof AiProviderError && (error.status === 401 || error.status === 403)) {
+        const fallback = await this.providers.fallbackToPlatform(userId);
+        const result = await fallback.complete({ prompt, maxTokens });
+        return { ...result, provider: fallback.kind };
+      }
+      if (error instanceof AiTimeoutError || error instanceof AiProviderError) {
         throw error;
       }
-      if (error instanceof AiProviderError) {
-        throw error;
-      }
-      throw new AiProviderError(
-        error instanceof Error ? error.message : "Unknown AI provider error.",
-      );
+      throw new AiProviderError(error instanceof Error ? error.message : "Unknown AI provider error.");
     }
   }
 }
 
-/**
- * Validate and clean the model's markdown output.
- * Strips surrounding code fences the model sometimes adds despite instructions.
- */
 function validateMarkdown(raw: string): string {
   let content = raw.trim();
   const fenceMatch = content.match(/^```(?:markdown|md)?\s*\n([\s\S]*?)\n```$/);
-  if (fenceMatch?.[1]) {
-    content = fenceMatch[1].trim();
-  }
-  if (content.length === 0) {
-    throw new AiProviderError("AI returned empty content.", 502);
-  }
+  if (fenceMatch?.[1]) content = fenceMatch[1].trim();
+  if (content.length === 0) throw new AiProviderError("AI returned empty content.", 502);
   return content;
 }
