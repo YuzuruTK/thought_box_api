@@ -110,21 +110,6 @@ boxes.delete("/:id", async (c) => {
   }
 });
 
-boxes.post("/:id/generate-summary", async (c) => {
-  const userId = c.get("userId");
-  const id = parseId(c.req.param("id"));
-  if (id === null) {
-    return c.json({ error: "Invalid box id." }, 400);
-  }
-  try {
-    const generator = new AiGenerator(c.env);
-    const doc = await generator.generateSummary(userId, id);
-    return c.json(serializeDocument(doc), 201);
-  } catch (error) {
-    return handleGenerationError(c, error);
-  }
-});
-
 boxes.post("/:id/generate-document", async (c) => {
   const userId = c.get("userId");
   const id = parseId(c.req.param("id"));
@@ -133,8 +118,8 @@ boxes.post("/:id/generate-document", async (c) => {
   }
   try {
     const generator = new AiGenerator(c.env);
-    const doc = await generator.generateDocument(userId, id);
-    return c.json(serializeDocument(doc), 201);
+    await generator.synthesize(userId, id);
+    return c.json({ status: "ok" }, 201);
   } catch (error) {
     return handleGenerationError(c, error);
   }

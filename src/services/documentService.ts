@@ -59,6 +59,20 @@ export class DocumentService {
   }
 
   /**
+   * Find the most recently regenerated cached document of any type for a box.
+   * Used to enforce the shared synthesis cooldown (summary + document).
+   */
+  async findLatestForBox(boxId: number): Promise<GeneratedDocument | null> {
+    const [doc] = await this.db
+      .select()
+      .from(generatedDocuments)
+      .where(eq(generatedDocuments.boxId, boxId))
+      .orderBy(desc(generatedDocuments.updatedAt))
+      .limit(1);
+    return doc ?? null;
+  }
+
+  /**
    * Find the cached document of a given type for a box (no ownership check).
    */
   async findCached(boxId: number, type: DocumentType): Promise<GeneratedDocument | null> {

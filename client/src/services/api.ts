@@ -192,7 +192,7 @@ export function deleteThought(id: number): Promise<void> {
 }
 
 // ---------------------------------------------------------------------------
-// Generated documents (summary / document)
+// Generated documents (blended synthesis: resume + structured document)
 // ---------------------------------------------------------------------------
 
 export async function listDocuments(boxId: number): Promise<GeneratedDocument[]> {
@@ -200,11 +200,7 @@ export async function listDocuments(boxId: number): Promise<GeneratedDocument[]>
   return data.documents;
 }
 
-export function generateSummary(boxId: number): Promise<GeneratedDocument> {
-  return request(`/api/boxes/${boxId}/generate-summary`, { method: "POST", body: "" });
-}
-
-export function generateDocument(boxId: number): Promise<GeneratedDocument> {
+export function generateDocument(boxId: number): Promise<{ status: string }> {
   return request(`/api/boxes/${boxId}/generate-document`, { method: "POST", body: "" });
 }
 

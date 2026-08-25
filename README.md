@@ -19,9 +19,9 @@ User
 - **Thoughts** with full CRUD, rich metadata (`ai_title`, `ai_summary` placeholders), and `created_at`/`updated_at`
 - **Boxes** — user-scoped containers for thoughts (e.g. "Protein TCC", "ESP32 Jarvis")
 - **Tags** — many-to-many with thoughts (a thought can belong to multiple topics)
-- **AI Generation ("Distill" & "Synthesize")**:
-  - **Distill** (summary) — a brief plain-text resume of the box (1–2 sentences), regenerated automatically every hour for boxes whose thoughts changed
-  - **Synthesize** (document) — a structured markdown project summary connecting the thoughts, generated on demand with a one-per-hour cooldown
+- **AI Generation ("Synthesize")** — one request distills the box into a brief resume **and** synthesizes it into a structured markdown project summary, stored separately (resume feeds the grid-card previews)
+  - **Manual**: on-demand with a 30-minute cooldown
+  - **Hourly cron**: refreshes boxes whose thoughts changed, with a 20-minute quiet period to avoid churn
 - Generated outputs are **cached per box** and updated in place on regeneration
 - Request validation via **Zod**, typed end-to-end with **TypeScript**
 
@@ -131,9 +131,9 @@ What it covers:
 
 - **Login page** (`/login`) — register or log in; JWT stored in `localStorage` and attached as a Bearer token to every request; unauthenticated users are redirected to `/login`
 - **Boxes grid** (`/app`) — boxes as cards showing thought count, a 2-line preview of the cached AI summary, and created/edited dates. The first cell is always **"+ New Box"** (inline input, Enter creates and opens the box). Sort by `Created` or `Last edited` with an asc/desc toggle (persisted in `localStorage`); hover ✕ deletes a box
-- **Box view** (`/app/box/:id`) — two columns (stacked on mobile): thoughts + fast capture on the left, the synthesized document on the right. The distilled summary resume shows under the box name in the header (refreshed automatically hourly)
+- **Box view** (`/app/box/:id`) — two columns (stacked on mobile): thoughts + fast capture on the left, the synthesized output on the right. The blended result shows the brief resume on top, then the structured document beneath it
 - **Fast thought capture** — type a thought, press Enter: it's created optimistically, the input clears and keeps focus for the next idea
-- **Synthesize (document)** — one button in the right column; disabled while generating or on a **1-hour cooldown** (shows a live countdown); markdown rendering at the side
+- **Synthesize** — one button in the right column; disabled while generating or on a **30-minute cooldown** (shows a live countdown); markdown rendering at the side
 
 ## API Reference
 
@@ -187,23 +187,17 @@ All endpoints under `/api/*` except `/api/auth/*` require an `Authorization: Bea
 
 ### AI Generation
 
-**Distill** (summary) — brief 2-sentence plain-text resume of the box:
-
-- `POST /api/boxes/{id}/generate-summary`
-  - Loads the box's thoughts and asks the model for **at most two short sentences** describing the box (~200 chars, plain text, no markdown).
-  - The result is **cached** in `generated_documents` (type `summary`).
-  - This is also what the **hourly cron** does automatically: `RethinkService` refreshes every box whose thoughts changed since its last summary (new activity > summary `updated_at`), capped at 50 boxes per run. It cannot be triggered from the UI.
-  - Response `201`: the generated document (see shape below).
-  - Errors: `404` box not found, `400` box has no thoughts, `502` AI provider error, `504` AI timeout.
-
-**Synthesize** (document) — structured project summary of the box:
+**Synthesis** — one request produces both a brief resume and a structured document:
 
 - `POST /api/boxes/{id}/generate-document`
-  - Loads the box's thoughts and produces a structured markdown summary (sections: Overview, Main Ideas, Important Concepts, Open Questions), connecting the ideas.
-  - **Cooldown:** at most once per hour — a second call within 1h of the cached document returns `429` with minutes remaining.
-  - The result is **cached** and updated in place on regeneration.
-  - Response `201`: the generated document.
-  - Errors: as above, plus `429` cooldown.
+  - Loads the box's thoughts and asks the model for **one output** containing:
+    - a brief plain-text resume of the box (1–2 sentences), stored as the `summary` row, and
+    - a structured markdown document (`# Project Summary` — Overview, Main Ideas, Important Concepts, Open Questions), stored as the `document` row.
+  - The output is split at the first markdown heading: text before it becomes the resume, from it onwards becomes the document (the grid card previews read the resume row).
+  - **Manual cooldown:** at most once every **30 minutes** (counted from the most recent regeneration of any kind) — an early call returns `429` with minutes remaining.
+  - **Hourly cron** (`0 * * * *`): `RethinkService` regenerates a box only when it **has thoughts**, its **most recent thought activity is newer than its last regeneration**, and it hasn't been regenerated in the **last 20 minutes** (quiet period). Capped at 50 boxes/run, per-box failure isolation.
+  - Response `201`: `{ "status": "ok" }`.
+  - Errors: `404` box not found, `400` box has no thoughts, `429` cooldown, `502` AI provider error, `504` AI timeout.
 
 - `GET /api/boxes/{id}/documents`
   - Returns the cached summary and/or document for the box.

@@ -1,30 +1,29 @@
 import { useEffect, useState } from "react";
-import { useDocuments, useGeneration } from "../../hooks/useDocuments";
+import { useDocuments, useSynthesize } from "../../hooks/useDocuments";
 import { Markdown } from "../../lib/markdown";
 import { EmptyState, ErrorBanner } from "../../components/Feedback";
 import { ApiError } from "../../services/api";
+import { formatTime } from "../../lib/dates";
 
-/** Document synthesis cooldown (mirrors the backend's 1h limit). */
-const COOLDOWN_MS = 60 * 60 * 1_000;
-
-function formatTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-}
+/** Manual synthesis cooldown (mirrors the backend's 30-minute limit). */
+const COOLDOWN_MS = 30 * 60 * 1_000;
 
 /**
- * Right column of the box view: the synthesized document + cooldown-aware
- * "Synthesize" button. The summary resume lives in the page header instead.
+ * Right column of the box view: the synthesized output — a short resume on
+ * top (which doubles as the box's distilled summary) followed by the
+ * structured document. Includes a cooldown-aware "Synthesize" button.
  */
 export function DocumentPanel({ boxId }: { boxId: number }) {
   const docsQuery = useDocuments(boxId);
-  const { document: synth, isGenerating } = useGeneration(boxId);
+  const synth = useSynthesize(boxId);
 
   const [now, setNow] = useState(() => Date.now());
 
   const rawDocs = docsQuery.data ?? [];
   const doc = rawDocs.find((d) => d.type === "document");
+  const summaryResume = rawDocs.find((d) => d.type === "summary");
+
+  // Cooldown is driven by the most recent regeneration (either row).
   const lastSynth = doc ? new Date(doc.updatedAt).getTime() : 0;
   const remaining = lastSynth + COOLDOWN_MS - now;
   const onCooldown = remaining > 0;
@@ -38,6 +37,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
   }, [onCooldown]);
 
   const error = synth.error instanceof ApiError ? synth.error.message : null;
+  const isGenerating = synth.isPending;
 
   const buttonLabel = isGenerating
     ? "Synthesizing…"
@@ -70,7 +70,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
         </button>
       </div>
 
-      {/* Rendered markdown document */}
+      {/* Blended output: resume on top, structured document below */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {docsQuery.isPending ? (
           <p className="text-sm text-neutral-400">Loading…</p>
@@ -78,6 +78,14 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
           <p className="text-sm text-neutral-400">Synthesizing…</p>
         ) : doc ? (
           <article className="mx-auto max-w-3xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm md:p-8">
+            {summaryResume && summaryResume.content && (
+              <>
+                <p className="mb-5 text-sm italic leading-snug text-neutral-600">
+                  {summaryResume.content}
+                </p>
+                <hr className="mb-5 border-neutral-200" />
+              </>
+            )}
             <Markdown content={doc.content} />
             <footer className="mt-8 border-t border-neutral-100 pt-3 text-[11px] text-neutral-400">
               Synthesized {formatTime(doc.updatedAt)} · {doc.model}
@@ -86,7 +94,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
         ) : (
           <EmptyState
             title="No synthesized document yet."
-            hint='Click "Synthesize" to connect your thoughts into a structured project summary.'
+            hint='Click "Synthesize" to blend your thoughts into a brief resume and a structured project summary.'
           />
         )}
       </div>

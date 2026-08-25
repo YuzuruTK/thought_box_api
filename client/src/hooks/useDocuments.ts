@@ -4,7 +4,7 @@ import type { GeneratedDocument } from "../services/api";
 
 export type DocType = GeneratedDocument["type"];
 
-/** Cached summary + document for a box (either may be absent). */
+/** Cached summary (resume) + document for a box (either may be absent). */
 export function useDocuments(boxId: number | null) {
   return useQuery({
     queryKey: ["documents", boxId],
@@ -13,38 +13,21 @@ export function useDocuments(boxId: number | null) {
   });
 }
 
-/**
- * Generation mutations for a box. Both are exposed together so the UI can
- * disable both buttons while either request is in flight.
- */
-export function useGeneration(boxId: number | null) {
+/** Single blended synthesis mutation for a box (resume + document). */
+export function useSynthesize(boxId: number | null) {
   const queryClient = useQueryClient();
 
-  const onSuccess = () => {
-    if (boxId !== null) {
-      void queryClient.invalidateQueries({ queryKey: ["documents", boxId] });
-    }
-  };
-
-  const summary = useMutation({
-    mutationFn: () => {
-      if (boxId === null) return Promise.reject(new Error("No box selected."));
-      return api.generateSummary(boxId);
-    },
-    onSuccess,
-    onSettled: onSuccess,
-  });
-
-  const document = useMutation({
+  return useMutation({
     mutationFn: () => {
       if (boxId === null) return Promise.reject(new Error("No box selected."));
       return api.generateDocument(boxId);
     },
-    onSuccess,
-    onSettled: onSuccess,
+    onSettled: () => {
+      if (boxId !== null) {
+        void queryClient.invalidateQueries({ queryKey: ["documents", boxId] });
+        // Grid card previews read the summary row, which also just changed.
+        void queryClient.invalidateQueries({ queryKey: ["boxes"] });
+      }
+    },
   });
-
-  const isGenerating = summary.isPending || document.isPending;
-
-  return { summary, document, isGenerating };
 }

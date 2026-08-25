@@ -3,26 +3,48 @@ import { getDb, type Database } from "../../db";
 import { BoxService } from "../boxService";
 import { ThoughtService } from "../thoughtService";
 import { DocumentService } from "../documentService";
-import { ValidationError } from "../errors";
+import { ValidationError, CooldownError } from "../errors";
 import { chatCompletion, AiProviderError, AiTimeoutError } from "./openrouter";
-import { buildSummaryPrompt, buildDocumentPrompt } from "./prompts";
-import { CooldownError } from "../errors";
-import type { GeneratedDocument } from "../../db/schema";
+import { buildSynthesisPrompt } from "./prompts";
 
-/** Token limits to control cost. */
-const SUMMARY_MAX_TOKENS = 150;
-const DOCUMENT_MAX_TOKENS = 1_000;
+/** Token limit for the single blended (resume + document) request. */
+const SYNTHESIS_MAX_TOKENS = 1_000;
 
-/** Minimum time between document syntheses. */
-const DOCUMENT_COOLDOWN_MS = 60 * 60 * 1_000;
+/** Minimum time between manual syntheses (minutes). */
+const SYNTHESIS_COOLDOWN_MS = 30 * 60 * 1_000;
 
 /** Maximum number of thoughts sent to the model per generation. */
 const MAX_THOUGHTS_PER_PROMPT = 200;
 
-export type GenerationType = "summary" | "document";
+/**
+ * Split a blended model response into the resume (plain text before the
+ * first markdown H1) and the document (from the first "# heading" onwards).
+ */
+interface SynthesisParts {
+  resume: string;
+  document: string;
+  documentTitle: string;
+}
+
+function splitSynthesisContent(content: string): SynthesisParts {
+  const h1Index = content.search(/^#\s+/m);
+  if (h1Index === -1) {
+    // No document heading found - treat everything as the document so we
+    // never lose content; resume is left empty.
+    return { resume: "", document: content.trim(), documentTitle: "Project Summary" };
+  }
+  const resume = content.slice(0, h1Index).trim();
+  const document = content.slice(h1Index).trim();
+  const titleMatch = document.match(/^#\s+(.+)$/m);
+  return {
+    resume,
+    document,
+    documentTitle: titleMatch?.[1]?.trim() ?? "Project Summary",
+  };
+}
 
 /**
- * AI generator — orchestrates thought loading, prompt building, the
+ * AI generator - orchestrates thought loading, prompt building, the
  * OpenRouter call, response validation, and cache persistence.
  */
 export class AiGenerator {
@@ -39,52 +61,39 @@ export class AiGenerator {
   }
 
   /**
-   * Generate (or regenerate) the cached summary for a box.
+   * Synthesize (or re-synthesize) a box: one request produces both the brief
+   * resume (stored as `summary`) and the structured document.
+   * Manual calls are rate-limited by SYNTHESIS_COOLDOWN_MS.
    */
-  async generateSummary(userId: number, boxId: number): Promise<GeneratedDocument> {
-    const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
-
-    const prompt = buildSummaryPrompt({
-      boxName: box.name,
-      boxDescription: box.description,
-      thoughts: thoughtContents,
-    });
-
-    const content = await this.callModel(prompt, SUMMARY_MAX_TOKENS);
-    const title = extractTitle(content) ?? `${box.name} — Summary`;
-
-    return this.documents.upsert(userId, boxId, "summary", title, content, this.env.AI_MODEL);
-  }
-
-  /**
-   * Synthesize (or re-synthesize) the cached document for a box.
-   * Rate-limited to one synthesis per hour.
-   */
-  async generateDocument(userId: number, boxId: number): Promise<GeneratedDocument> {
-    // Enforce the cooldown based on the cached document's timestamp.
-    const cached = await this.documents.findCached(boxId, "document");
-    if (cached) {
-      const elapsed = Date.now() - cached.updatedAt.getTime();
-      if (elapsed < DOCUMENT_COOLDOWN_MS) {
-        const minutes = Math.ceil((DOCUMENT_COOLDOWN_MS - elapsed) / 60_000);
+  async synthesize(userId: number, boxId: number): Promise<void> {
+    // Manual cooldown against the most recent regeneration of any kind
+    // (summary and document rows are always written together).
+    const last = await this.documents.findLatestForBox(boxId);
+    if (last) {
+      const elapsed = Date.now() - last.updatedAt.getTime();
+      if (elapsed < SYNTHESIS_COOLDOWN_MS) {
+        const minutes = Math.ceil((SYNTHESIS_COOLDOWN_MS - elapsed) / 60_000);
         throw new CooldownError(
-          `The document can be synthesized once per hour. Try again in ${minutes} min.`,
+          `The document can be synthesized once every 30 minutes. Try again in ${minutes} min.`,
         );
       }
     }
 
     const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
 
-    const prompt = buildDocumentPrompt({
+    const prompt = buildSynthesisPrompt({
       boxName: box.name,
       boxDescription: box.description,
       thoughts: thoughtContents,
     });
 
-    const content = await this.callModel(prompt, DOCUMENT_MAX_TOKENS);
-    const title = extractTitle(content) ?? `${box.name} — Document`;
+    const content = await this.callModel(prompt, SYNTHESIS_MAX_TOKENS);
+    const { resume, document, documentTitle } = splitSynthesisContent(content);
 
-    return this.documents.upsert(userId, boxId, "document", title, content, this.env.AI_MODEL);
+    // Persist both the resume and the document from the single request.
+    const model = this.env.AI_MODEL;
+    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, model);
+    await this.documents.upsert(userId, boxId, "document", documentTitle, document, model);
   }
 
   // ---- internals ----------------------------------------------------------
@@ -139,13 +148,7 @@ function validateMarkdown(raw: string): string {
     content = fenceMatch[1].trim();
   }
   if (content.length === 0) {
-    throw new AiProviderError("AI returned empty content.");
+    throw new AiProviderError("AI returned empty content.", 502);
   }
   return content;
-}
-
-/** Extract a document title from the first markdown heading, if any. */
-function extractTitle(markdown: string): string | null {
-  const match = markdown.match(/^#\s+(.+)$/m);
-  return match?.[1]?.trim() ?? null;
 }

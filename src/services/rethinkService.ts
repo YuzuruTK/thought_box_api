@@ -7,17 +7,22 @@ import { AiGenerator } from "./ai/generator";
 /** Maximum number of boxes rethought per cron run (bounds hourly cost). */
 const MAX_BOXES_PER_RUN = 50;
 
+/** Skip boxes regenerated within the last 20 minutes (quiet period). */
+const QUIET_PERIOD_MS = 20 * 60 * 1_000;
+
 interface StaleBox {
   id: number;
   userId: number;
 }
 
 /**
- * Rethink service — the hourly cron that refreshes summaries.
+ * Rethink service — the hourly cron that refreshes box syntheses.
  *
- * Only boxes whose thoughts changed since the last summary are processed:
- *  - no cached summary yet, or
- *  - the most recent thought activity is newer than the summary.
+ * A box qualifies when ALL of the following hold:
+ *  - it has thoughts,
+ *  - the most recent thought activity is newer than the last regeneration
+ *    of ANY kind (summary or document — unified synthesis writes both),
+ *  - it hasn't been regenerated in the last 20 minutes (quiet period).
  */
 export class RethinkService {
   private readonly db: Database;
@@ -28,7 +33,7 @@ export class RethinkService {
     this.generator = new AiGenerator(env);
   }
 
-  /** Boxes whose distilled summary is stale (missing or older than a thought). */
+  /** Boxes that need a fresh synthesis (stale AND past the quiet period). */
   async findStaleBoxes(): Promise<StaleBox[]> {
     return this.db
       .select({ id: boxes.id, userId: boxes.userId })
@@ -38,19 +43,25 @@ export class RethinkService {
       .groupBy(boxes.id, boxes.userId)
       .having(
         sql`coalesce(max(${thoughts.updatedAt}), 0) >
-          coalesce(
-            (select gd.updated_at from ${generatedDocuments} gd
-             where gd.box_id = ${boxes.id} and gd.type = 'summary'),
-            0
-          )`,
+              coalesce(
+                (select max(gd.updated_at) from ${generatedDocuments} gd
+                 where gd.box_id = ${boxes.id}),
+                0
+              )
+              AND
+              coalesce(
+                (select max(gd.updated_at) from ${generatedDocuments} gd
+                 where gd.box_id = ${boxes.id}),
+                0
+              ) < ${Date.now()} - ${QUIET_PERIOD_MS}`,
       )
       .orderBy(sql`max(${thoughts.updatedAt}) desc`)
       .limit(MAX_BOXES_PER_RUN);
   }
 
   /**
-   * Refresh every stale box summary. Failures are isolated per box so one
-   * failing model call doesn't stop the rest.
+   * Synthesize every stale box (blended resume + document). Failures are
+   * isolated per box so one failing model call doesn't stop the rest.
    */
   async run(): Promise<{ processed: number; failed: number }> {
     const stale = await this.findStaleBoxes();
@@ -59,11 +70,11 @@ export class RethinkService {
 
     for (const box of stale) {
       try {
-        await this.generator.generateSummary(box.userId, box.id);
+        await this.generator.synthesize(box.userId, box.id);
         processed++;
       } catch (error) {
         failed++;
-        console.error(`[rethink] failed to distill box ${box.id}:`, error);
+        console.error(`[rethink] failed to synthesize box ${box.id}:`, error);
       }
     }
 

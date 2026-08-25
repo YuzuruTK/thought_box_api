@@ -3,13 +3,11 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ThoughtsPanel } from "../features/thoughts/ThoughtsPanel";
 import { DocumentPanel } from "../features/documents/DocumentPanel";
 import { useBoxes } from "../hooks/useBoxes";
-import { useDocuments } from "../hooks/useDocuments";
-import { formatTime } from "../lib/dates";
 
 /**
  * Box view with two panes side by side (stacked on mobile):
- * left — thoughts & fast capture; right — the synthesized document.
- * The distilled summary resume sits in the header, spanning both.
+ * left — thoughts & fast capture; right — the synthesized output
+ * (brief resume + structured document).
  */
 export default function AppPage() {
   const params = useParams<{ boxId: string }>();
@@ -22,9 +20,6 @@ export default function AppPage() {
   const boxesQuery = useBoxes();
   const boxes = boxesQuery.data ?? [];
   const selectedBox = boxes.find((box) => box.id === selectedBoxId);
-
-  const docsQuery = useDocuments(selectedBoxId);
-  const summaryDoc = docsQuery.data?.find((doc) => doc.type === "summary");
 
   // If the selected box disappears (e.g. deleted in this session), go back to
   // the grid.
@@ -51,18 +46,6 @@ export default function AppPage() {
           </div>
           <span className="shrink-0 text-[11px] text-neutral-400">auto hourly</span>
         </div>
-
-        {/* Distilled summary resume */}
-        <p className="mt-1 line-clamp-2 text-sm italic leading-snug text-neutral-600">
-          {summaryDoc
-            ? summaryDoc.content
-            : "No distilled summary yet — it refreshes automatically every hour."}
-        </p>
-        {summaryDoc && (
-          <p className="mt-0.5 text-[11px] text-neutral-400">
-            Distilled {formatTime(summaryDoc.updatedAt)}
-          </p>
-        )}
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
