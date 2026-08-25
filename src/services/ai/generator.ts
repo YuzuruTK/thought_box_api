@@ -12,25 +12,15 @@ const SYNTHESIS_MAX_TOKENS = 1_000;
 const SYNTHESIS_COOLDOWN_MS = 30 * 60 * 1_000;
 const MAX_THOUGHTS_PER_PROMPT = 200;
 
-interface SynthesisParts {
-  resume: string;
-  document: string;
-  documentTitle: string;
-}
+interface SynthesisParts { resume: string; document: string; documentTitle: string; }
 
 function splitSynthesisContent(content: string): SynthesisParts {
   const h1Index = content.search(/^#\s+/m);
-  if (h1Index === -1) {
-    return { resume: "", document: content.trim(), documentTitle: "Project Summary" };
-  }
+  if (h1Index === -1) return { resume: "", document: content.trim(), documentTitle: "Project Summary" };
   const resume = content.slice(0, h1Index).trim();
   const document = content.slice(h1Index).trim();
   const titleMatch = document.match(/^#\s+(.+)$/m);
-  return {
-    resume,
-    document,
-    documentTitle: titleMatch?.[1]?.trim() ?? "Project Summary",
-  };
+  return { resume, document, documentTitle: titleMatch?.[1]?.trim() ?? "Project Summary" };
 }
 
 export class AiGenerator {
@@ -54,23 +44,15 @@ export class AiGenerator {
       const elapsed = Date.now() - last.updatedAt.getTime();
       if (elapsed < SYNTHESIS_COOLDOWN_MS) {
         const minutes = Math.ceil((SYNTHESIS_COOLDOWN_MS - elapsed) / 60_000);
-        throw new CooldownError(
-          `The document can be synthesized once every 30 minutes. Try again in ${minutes} min.`,
-        );
+        throw new CooldownError(`The document can be synthesized once every 30 minutes. Try again in ${minutes} min.`);
       }
     }
-
     const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
-    const prompt = buildSynthesisPrompt({
-      boxName: box.name,
-      boxDescription: box.description,
-      thoughts: thoughtContents,
-    });
-
+    const prompt = buildSynthesisPrompt({ boxName: box.name, boxDescription: box.description, thoughts: thoughtContents });
     const provider = await this.providers.resolve(userId);
     const result = await this.callProvider(provider, userId, prompt, SYNTHESIS_MAX_TOKENS);
-    const { resume, document, documentTitle } = splitSynthesisContent(result.content);
-
+    const content = validateMarkdown(result.content);
+    const { resume, document, documentTitle } = splitSynthesisContent(content);
     await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, result.model, result.provider);
     await this.documents.upsert(userId, boxId, "document", documentTitle, document, result.model, result.provider);
   }
@@ -78,9 +60,7 @@ export class AiGenerator {
   private async loadBoxContext(userId: number, boxId: number) {
     const box = await this.boxes.getOwned(userId, boxId);
     const boxThoughts = await this.thoughts.listForBox(boxId);
-    if (boxThoughts.length === 0) {
-      throw new ValidationError("Box has no thoughts to generate from.");
-    }
+    if (boxThoughts.length === 0) throw new ValidationError("Box has no thoughts to generate from.");
     const limited = boxThoughts.slice(0, MAX_THOUGHTS_PER_PROMPT);
     return { box, thoughtContents: limited.map((thought) => thought.content) };
   }
@@ -95,16 +75,12 @@ export class AiGenerator {
       const result = await provider.complete({ prompt, maxTokens });
       return { ...result, provider: provider.kind };
     } catch (error) {
-      // Only authentication failures invalidate a BYOK key. Rate limits,
-      // provider outages and model errors must not silently disable it.
       if (provider.kind === "byok" && error instanceof AiProviderError && (error.status === 401 || error.status === 403)) {
         const fallback = await this.providers.fallbackToPlatform(userId);
         const result = await fallback.complete({ prompt, maxTokens });
         return { ...result, provider: fallback.kind };
       }
-      if (error instanceof AiTimeoutError || error instanceof AiProviderError) {
-        throw error;
-      }
+      if (error instanceof AiTimeoutError || error instanceof AiProviderError) throw error;
       throw new AiProviderError(error instanceof Error ? error.message : "Unknown AI provider error.");
     }
   }
