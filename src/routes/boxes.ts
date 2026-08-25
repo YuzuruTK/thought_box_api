@@ -81,6 +81,10 @@ boxes.get("/", async (c) => {
       name: box.name,
       description: box.description,
       createdAt: box.createdAt,
+      thoughtCount: box.thoughtCount,
+      lastActivityAt:
+        box.lastActivityAt !== null ? new Date(box.lastActivityAt).toISOString() : null,
+      summaryPreview: box.summaryPreview,
     })),
   });
 });

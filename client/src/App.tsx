@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import AppPage from "./pages/AppPage";
+import { BoxesGrid } from "./features/boxes/BoxesGrid";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 
 export default function App() {
@@ -12,7 +13,7 @@ export default function App() {
           path="/app"
           element={
             <ProtectedRoute>
-              <AppPage />
+              <BoxesGrid />
             </ProtectedRoute>
           }
         />

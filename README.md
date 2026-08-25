@@ -60,7 +60,7 @@ npm install
 ### 2. Create the D1 database
 
 ```bash
-npx wrangler d1 create thought_box_db
+npx wrangler d1 create thought_box
 ```
 
 Copy the returned `database_id` into `wrangler.jsonc` (replacing `REPLACE_WITH_YOUR_D1_DATABASE_ID`).
@@ -130,7 +130,8 @@ npm run typecheck
 What it covers:
 
 - **Login page** (`/login`) — register or log in; JWT stored in `localStorage` and attached as a Bearer token to every request; unauthenticated users are redirected to `/login`
-- **Main app** (`/app`, `/app/box/:id`) — sidebar with your boxes (create inline with "+ New Box", delete with ✕), main pane with **Thoughts | Summary | Document** tabs
+- **Boxes grid** (`/app`) — boxes as cards showing thought count, a 2-line preview of the cached AI summary, and created/edited dates. The first cell is always **"+ New Box"** (inline input, Enter creates and opens the box). Sort by `Created` or `Last edited` with an asc/desc toggle (persisted in `localStorage`); hover ✕ deletes a box
+- **Box view** (`/app/box/:id`) — **Thoughts | Summary | Document** tabs
 - **Fast thought capture** — type a thought, press Enter: it's created optimistically, the input clears and keeps focus for the next idea
 - **Summary / Document tabs** — Generate/Regenerate buttons (disabled while running), markdown rendering of cached results
 

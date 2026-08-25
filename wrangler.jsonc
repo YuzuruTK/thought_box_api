@@ -10,8 +10,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "thought_box_db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID",
+      "database_name": "thought_box",
+      "database_id": "80cee6ae-05fb-4f61-9b89-a364477a02fb",
       "migrations_dir": "drizzle"
     }
   ],

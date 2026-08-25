@@ -9,6 +9,12 @@ export interface Box {
   name: string;
   description: string | null;
   createdAt: string;
+  /** Number of thoughts in the box (computed server-side). */
+  thoughtCount: number;
+  /** Most recent thought activity, or null when the box is empty. */
+  lastActivityAt: string | null;
+  /** First ~160 chars of the cached AI summary, or null if none generated. */
+  summaryPreview: string | null;
 }
 
 export interface Thought {

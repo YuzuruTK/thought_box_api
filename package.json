@@ -10,8 +10,8 @@
     "build": "npm --prefix client run build",
     "deploy": "npm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrations apply thought_box_db --local",
-    "db:migrate:remote": "wrangler d1 migrations apply thought_box_db --remote",
+    "db:migrate": "wrangler d1 migrations apply thought_box --local",
+    "db:migrate:remote": "wrangler d1 migrations apply thought_box --remote",
     "typecheck": "tsc --noEmit",
     "typecheck:web": "npm --prefix client run typecheck"
   },
