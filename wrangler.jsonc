@@ -4,8 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-06-01",
   // D1 database binding.
-  // Create the database with:
-  //   npx wrangler d1 create thought_box_db
+  // Created with:
+  //   npx wrangler d1 create thought_box
   // then paste the returned database_id below.
   "d1_databases": [
     {
