@@ -8,6 +8,7 @@ const STATUS_MESSAGES: Record<number, string> = {
   401: "Your session has expired. Please log in again.",
   404: "That item no longer exists.",
   409: "That item already exists.",
+  429: "That action is on cooldown. Please try again in a moment.",
   500: "Something went wrong on our end. Please try again.",
   502: "The AI provider could not be reached. Please try again in a moment.",
   504: "The AI request took too long. Please try again in a moment.",

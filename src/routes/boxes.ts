@@ -7,7 +7,7 @@ import { AiGenerator } from "../services/ai/generator";
 import { AiProviderError, AiTimeoutError } from "../services/ai/openrouter";
 import { requireAuth, type AppVariables } from "../auth/middleware";
 import { createBoxSchema } from "../schemas";
-import { NotFoundError, ValidationError } from "../services/errors";
+import { NotFoundError, ValidationError, CooldownError } from "../services/errors";
 import type { Env } from "../env";
 import type { GeneratedDocument } from "../db/schema";
 
@@ -45,6 +45,9 @@ function handleGenerationError(
   }
   if (error instanceof ValidationError) {
     return c.json({ error: error.message }, 400);
+  }
+  if (error instanceof CooldownError) {
+    return c.json({ error: error.message }, 429);
   }
   if (error instanceof AiTimeoutError) {
     return c.json({ error: error.message }, 504);

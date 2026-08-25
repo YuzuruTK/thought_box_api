@@ -92,7 +92,8 @@ async function attemptRequest(options: CompletionOptions): Promise<string> {
 
   const content = body.choices?.[0]?.message?.content;
   if (typeof content !== "string" || content.trim().length === 0) {
-    throw new AiProviderError("OpenRouter returned an empty completion.");
+    // Status 502 marks this as a retryable provider failure.
+    throw new AiProviderError("OpenRouter returned an empty completion.", 502);
   }
   return content;
 }

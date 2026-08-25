@@ -4,17 +4,7 @@ import { useCreateThought, useDeleteThought, useThoughts } from "../../hooks/use
 import { ApiError } from "../../services/api";
 import type { Thought } from "../../services/api";
 import { EmptyState, ErrorBanner } from "../../components/Feedback";
-
-function formatTimestamp(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { formatTimestamp } from "../../lib/dates";
 
 interface ThoughtsPanelProps {
   boxId: number;

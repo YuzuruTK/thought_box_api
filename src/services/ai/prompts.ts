@@ -17,8 +17,6 @@ export interface PromptContext {
   boxName: string;
   boxDescription?: string | null;
   thoughts: string[];
-  /** Latest cached summary, used as context for document generation. */
-  summary?: string | null;
 }
 
 function formatThoughts(thoughts: string[]): string {
@@ -33,10 +31,11 @@ function formatBoxHeader(context: PromptContext): string {
 }
 
 /**
- * Prompt for generating a concise, structured markdown project summary.
+ * Prompt for distilling a box into a brief plain-text resume:
+ * at most two short sentences describing what the box is about.
  */
 export function buildSummaryPrompt(context: PromptContext): string {
-  return `You are an assistant that summarizes collections of short notes ("thoughts") into a concise project summary.
+  return `You are an assistant that distills collections of short notes ("thoughts") into a very brief resume.
 
 ${formatBoxHeader(context)}
 
@@ -44,7 +43,37 @@ Thoughts:
 ${formatThoughts(context.thoughts)}
 
 TASK:
-- Identify the main themes across the thoughts.
+- Identify what this collection of thoughts is about at its core.
+- Write ONE OR TWO short sentences that capture that essence.
+- Use only the information present in the thoughts.
+
+OUTPUT FORMAT:
+- Plain text only.
+- No markdown, no headings, no bullets, no numbering.
+- Do not mention the instructions, the thoughts list, the box name, or how you wrote this.
+- Do not reuse the words "thoughts", "resume", "sentence" or "summarize".
+- Write directly about the topic as if describing it to another person.
+
+${SAFETY_RULES}
+
+Respond with the plain-text resume only.`;
+}
+
+/**
+ * Prompt for synthesizing the thoughts into one structured project
+ * document (sections: Overview, Main Ideas, Important Concepts,
+ * Open Questions).
+ */
+export function buildDocumentPrompt(context: PromptContext): string {
+  return `You are an assistant that synthesizes collections of short notes ("thoughts") into a structured project summary.
+
+${formatBoxHeader(context)}
+
+Thoughts:
+${formatThoughts(context.thoughts)}
+
+TASK:
+- Identify the main themes across the thoughts and how they connect.
 - Merge duplicate or overlapping thoughts.
 - Preserve important details; do not lose information.
 - Produce a concise, structured, easy-to-read summary in markdown.
@@ -63,39 +92,4 @@ OUTPUT FORMAT (use exactly these sections):
 ${SAFETY_RULES}
 
 Respond with the markdown summary only. Do not wrap it in code fences.`;
-}
-
-/**
- * Prompt for generating a complete, professional structured document
- * (e.g. Game Design Document, Research Summary, Product Specification,
- * Technical Architecture, or Story Outline) from the thoughts.
- */
-export function buildDocumentPrompt(context: PromptContext): string {
-  const summarySection = context.summary
-    ? `\nLatest project summary (use as context, but the thoughts are the source of truth):\n${context.summary}\n`
-    : "";
-
-  return `You are a professional technical writer that transforms collections of short notes ("thoughts") into a complete, well-structured document.
-
-${formatBoxHeader(context)}
-${summarySection}
-Thoughts:
-${formatThoughts(context.thoughts)}
-
-TASK:
-- Infer the most appropriate document type from the content (e.g. Game Design Document, Research Summary, Product Specification, Technical Architecture, Story Outline).
-- Organize the thoughts into logical sections with clear headings.
-- Remove duplicates.
-- Expand fragmented ideas into complete, coherent paragraphs — but only using information present in the thoughts.
-- Maintain consistency in tone and terminology throughout.
-- The result should read like a professional specification.
-
-OUTPUT FORMAT:
-- Start with a top-level title (# ...) that names the document.
-- Follow with logical sections (## ...) appropriate for the inferred document type.
-- Use markdown throughout.
-
-${SAFETY_RULES}
-
-Respond with the markdown document only. Do not wrap it in code fences.`;
 }

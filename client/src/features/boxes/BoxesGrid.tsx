@@ -7,6 +7,7 @@ import { useBoxes, useCreateBox, useDeleteBox } from "../../hooks/useBoxes";
 import { ApiError } from "../../services/api";
 import type { Box } from "../../services/api";
 import { ErrorBanner } from "../../components/Feedback";
+import { formatShortDate } from "../../lib/dates";
 
 const boxNameSchema = z.string().trim().min(1).max(100);
 
@@ -48,12 +49,6 @@ function sortTimestamp(box: Box, field: SortField): number {
   const iso = field === "created" ? box.createdAt : (box.lastActivityAt ?? box.createdAt);
   const time = new Date(iso).getTime();
   return Number.isNaN(time) ? 0 : time;
-}
-
-function formatShortDate(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 /**

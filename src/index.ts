@@ -8,6 +8,7 @@ import tags from "./routes/tags";
 import boxes from "./routes/boxes";
 import documents from "./routes/documents";
 import type { Env } from "./env";
+import { RethinkService } from "./services/rethinkService";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -34,4 +35,13 @@ app.onError((error, c) => {
   return c.json({ error: "Internal server error." }, 500);
 });
 
-export default app;
+/** Hourly cron: distill stale box summaries (see RethinkService). */
+async function scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+  const result = await new RethinkService(env).run();
+  console.log(`[rethink] hour cron: processed=${result.processed} failed=${result.failed}`);
+}
+
+export default {
+  fetch: app.fetch,
+  scheduled,
+};

@@ -28,3 +28,11 @@ export class ValidationError extends Error {
     this.name = "ValidationError";
   }
 }
+
+/** Rate-limit style rejection (e.g. regeneration cooldown not elapsed). */
+export class CooldownError extends Error {
+  constructor(message = "This action is on cooldown. Try again later.") {
+    super(message);
+    this.name = "CooldownError";
+  }
+}

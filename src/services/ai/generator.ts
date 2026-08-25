@@ -6,11 +6,15 @@ import { DocumentService } from "../documentService";
 import { ValidationError } from "../errors";
 import { chatCompletion, AiProviderError, AiTimeoutError } from "./openrouter";
 import { buildSummaryPrompt, buildDocumentPrompt } from "./prompts";
+import { CooldownError } from "../errors";
 import type { GeneratedDocument } from "../../db/schema";
 
 /** Token limits to control cost. */
-const SUMMARY_MAX_TOKENS = 1_000;
-const DOCUMENT_MAX_TOKENS = 4_000;
+const SUMMARY_MAX_TOKENS = 150;
+const DOCUMENT_MAX_TOKENS = 1_000;
+
+/** Minimum time between document syntheses. */
+const DOCUMENT_COOLDOWN_MS = 60 * 60 * 1_000;
 
 /** Maximum number of thoughts sent to the model per generation. */
 const MAX_THOUGHTS_PER_PROMPT = 200;
@@ -53,23 +57,28 @@ export class AiGenerator {
   }
 
   /**
-   * Generate (or regenerate) the cached document for a box.
-   * Uses the cached summary as context; generates one first if missing.
+   * Synthesize (or re-synthesize) the cached document for a box.
+   * Rate-limited to one synthesis per hour.
    */
   async generateDocument(userId: number, boxId: number): Promise<GeneratedDocument> {
-    const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
-
-    // Ensure a cached summary exists to use as context.
-    let summary = await this.documents.findCached(boxId, "summary");
-    if (!summary) {
-      summary = await this.generateSummary(userId, boxId);
+    // Enforce the cooldown based on the cached document's timestamp.
+    const cached = await this.documents.findCached(boxId, "document");
+    if (cached) {
+      const elapsed = Date.now() - cached.updatedAt.getTime();
+      if (elapsed < DOCUMENT_COOLDOWN_MS) {
+        const minutes = Math.ceil((DOCUMENT_COOLDOWN_MS - elapsed) / 60_000);
+        throw new CooldownError(
+          `The document can be synthesized once per hour. Try again in ${minutes} min.`,
+        );
+      }
     }
+
+    const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
 
     const prompt = buildDocumentPrompt({
       boxName: box.name,
       boxDescription: box.description,
       thoughts: thoughtContents,
-      summary: summary.content,
     });
 
     const content = await this.callModel(prompt, DOCUMENT_MAX_TOKENS);

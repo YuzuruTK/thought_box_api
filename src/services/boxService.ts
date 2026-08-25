@@ -10,8 +10,31 @@ export interface BoxWithStats extends Box {
   thoughtCount: number;
   /** Most recent thought activity in the box (ms epoch), or null if empty. */
   lastActivityAt: number | null;
-  /** First ~160 chars of the cached AI summary, or null if none generated. */
+  /** Brief plain-text resume of the cached AI summary, or null if none. */
   summaryPreview: string | null;
+}
+
+/**
+ * Reduce a summary snippet to a clean plain-text resume for grid cards.
+ * Handles stale structured summaries too (drops headings, strips markdown).
+ * Returns null when nothing usable remains.
+ */
+function toResume(snippet: string | null): string | null {
+  if (!snippet) return null;
+  const text = snippet
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("#")) // drop title/section headings
+    .join(" ")
+    .replace(/\*\*([^*]*)\*\*/g, "$1") // **bold**
+    .replace(/\*([^*]*)\*/g, "$1") // *italic*
+    .replace(/^[-*]\s+/gm, "") // bullet markers
+    .replace(/`/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (text.length === 0) return null;
+  if (text.length <= 140) return text;
+  const cut = text.slice(0, 140);
+  return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
 /**
@@ -36,7 +59,7 @@ export class BoxService {
   }
 
   async list(userId: number): Promise<BoxWithStats[]> {
-    return this.db
+    const rows = await this.db
       .select({
         id: boxes.id,
         userId: boxes.userId,
@@ -47,8 +70,8 @@ export class BoxService {
         lastActivityAt: sql<number | null>`max(${thoughts.updatedAt})`,
         // UNIQUE(box_id, type) guarantees at most one summary per box, so this
         // correlated subquery is 1:1-safe and never ships full documents.
-        summaryPreview: sql<string | null>`(
-          select substr(gd.content, 1, 160)
+        summarySnippet: sql<string | null>`(
+          select substr(gd.content, 1, 400)
           from generated_documents gd
           where gd.box_id = ${boxes.id} and gd.type = 'summary'
         )`,
@@ -59,6 +82,11 @@ export class BoxService {
       .where(eq(boxes.userId, userId))
       .groupBy(boxes.id)
       .orderBy(asc(boxes.name));
+
+    return rows.map((row) => ({
+      ...row,
+      summaryPreview: toResume(row.summarySnippet),
+    }));
   }
 
   /** Delete a box owned by the user, or throw NotFoundError. Cascades via FKs. */

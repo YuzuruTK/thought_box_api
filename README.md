@@ -14,15 +14,15 @@ User
 
 ## Features
 
-- **Web client** — register/login, manage boxes, rapid thought capture (type + Enter), and read AI-generated summaries & documents, all in one place
+- **Web client** — register/login, manage boxes, rapid thought capture (type + Enter), and read AI outputs, all in one place
 - **Users** with email/password registration and JWT login (bearer tokens)
 - **Thoughts** with full CRUD, rich metadata (`ai_title`, `ai_summary` placeholders), and `created_at`/`updated_at`
 - **Boxes** — user-scoped containers for thoughts (e.g. "Protein TCC", "ESP32 Jarvis")
 - **Tags** — many-to-many with thoughts (a thought can belong to multiple topics)
-- **AI Generation** — turn a box of thoughts into:
-  - a concise **project summary** (markdown, structured sections)
-  - a complete **document** (Game Design Document, Research Summary, Product Specification, Technical Architecture, Story Outline — inferred from content)
-- Generated documents are **cached per box** and updated in place on regeneration
+- **AI Generation ("Distill" & "Synthesize")**:
+  - **Distill** (summary) — a brief plain-text resume of the box (1–2 sentences), regenerated automatically every hour for boxes whose thoughts changed
+  - **Synthesize** (document) — a structured markdown project summary connecting the thoughts, generated on demand with a one-per-hour cooldown
+- Generated outputs are **cached per box** and updated in place on regeneration
 - Request validation via **Zod**, typed end-to-end with **TypeScript**
 
 ## Tech Stack
@@ -85,7 +85,7 @@ npx wrangler secret put OPENROUTER_API_KEY
 
 ### 4. Configure the AI model (optional)
 
-The model is configurable via the `AI_MODEL` variable in `wrangler.jsonc` (current default: `openrouter/free`, OpenRouter's auto-router over free models). Any OpenRouter model id works, e.g. `google/gemma-4-31b-it:free`, `openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`. Check [available models](https://openrouter.ai/models) — free models rotate over time.
+The model is configurable via the `AI_MODEL` variable in `wrangler.jsonc` (default: `google/gemma-4-31b-it:free`). Any OpenRouter model id works, e.g. `openai/gpt-4o-mini`, `anthropic/claude-3.5-sonnet`. Check [available models](https://openrouter.ai/models) — free models rotate over time. Note: `openrouter/free` (the auto-router) can pick weak models that ignore instructions, so pin a specific model for consistent quality.
 
 ### 5. Apply database migrations
 
@@ -131,9 +131,9 @@ What it covers:
 
 - **Login page** (`/login`) — register or log in; JWT stored in `localStorage` and attached as a Bearer token to every request; unauthenticated users are redirected to `/login`
 - **Boxes grid** (`/app`) — boxes as cards showing thought count, a 2-line preview of the cached AI summary, and created/edited dates. The first cell is always **"+ New Box"** (inline input, Enter creates and opens the box). Sort by `Created` or `Last edited` with an asc/desc toggle (persisted in `localStorage`); hover ✕ deletes a box
-- **Box view** (`/app/box/:id`) — **Thoughts | Summary | Document** tabs
+- **Box view** (`/app/box/:id`) — two columns (stacked on mobile): thoughts + fast capture on the left, the synthesized document on the right. The distilled summary resume shows under the box name in the header (refreshed automatically hourly)
 - **Fast thought capture** — type a thought, press Enter: it's created optimistically, the input clears and keeps focus for the next idea
-- **Summary / Document tabs** — Generate/Regenerate buttons (disabled while running), markdown rendering of cached results
+- **Synthesize (document)** — one button in the right column; disabled while generating or on a **1-hour cooldown** (shows a live countdown); markdown rendering at the side
 
 ## API Reference
 
@@ -187,17 +187,23 @@ All endpoints under `/api/*` except `/api/auth/*` require an `Authorization: Bea
 
 ### AI Generation
 
+**Distill** (summary) — brief 2-sentence plain-text resume of the box:
+
 - `POST /api/boxes/{id}/generate-summary`
-  - Loads every thought in the box, sends them to OpenRouter, and generates a concise structured markdown summary (sections: Overview, Main Ideas, Important Concepts, Open Questions).
-  - The result is **cached** in `generated_documents` — regenerating updates the cached summary in place.
+  - Loads the box's thoughts and asks the model for **at most two short sentences** describing the box (~200 chars, plain text, no markdown).
+  - The result is **cached** in `generated_documents` (type `summary`).
+  - This is also what the **hourly cron** does automatically: `RethinkService` refreshes every box whose thoughts changed since its last summary (new activity > summary `updated_at`), capped at 50 boxes per run. It cannot be triggered from the UI.
   - Response `201`: the generated document (see shape below).
   - Errors: `404` box not found, `400` box has no thoughts, `502` AI provider error, `504` AI timeout.
 
+**Synthesize** (document) — structured project summary of the box:
+
 - `POST /api/boxes/{id}/generate-document`
-  - Loads all thoughts plus the latest cached summary (generating a summary first if none exists) and produces a complete professional document (type inferred from content: GDD, Research Summary, Product Specification, Technical Architecture, Story Outline...).
+  - Loads the box's thoughts and produces a structured markdown summary (sections: Overview, Main Ideas, Important Concepts, Open Questions), connecting the ideas.
+  - **Cooldown:** at most once per hour — a second call within 1h of the cached document returns `429` with minutes remaining.
   - The result is **cached** and updated in place on regeneration.
   - Response `201`: the generated document.
-  - Errors: same as generate-summary.
+  - Errors: as above, plus `429` cooldown.
 
 - `GET /api/boxes/{id}/documents`
   - Returns the cached summary and/or document for the box.
