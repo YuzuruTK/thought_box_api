@@ -43,6 +43,13 @@ ${formatBoxHeader(context)}
 Thoughts:
 ${formatThoughts(context.thoughts)}
 
+LANGUAGE REQUIREMENT (must follow strictly):
+- Determine the predominant language used by the provided thoughts.
+- Write BOTH the resume and the structured document entirely in that same predominant language.
+- Do not translate the thoughts into another language.
+- Do not use the language of this instruction, the box name, or the model's default language as the output language when the thoughts indicate a different language.
+- If the thoughts contain multiple languages, use the language that represents the majority of the meaningful content.
+
 PART 1 — DISTILL (a very brief resume):
 - Identify what this collection of thoughts is about at its core.
 - Write ONE OR TWO short sentences that capture that essence.
