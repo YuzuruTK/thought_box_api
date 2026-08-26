@@ -17,12 +17,12 @@
   ],
   // JWT signing secret. Set with:
   //   npx wrangler secret put JWT_SECRET
-  // OpenRouter API key. Set with:
-  //   npx wrangler secret put OPENROUTER_API_KEY
-  // For local development, put secrets in `.dev.vars` (see `.dev.vars.example`).
+  // Gemini API key. Set with:
+  //   npx wrangler secret put GEMINI_API_KEY
+  // For local development, put secrets in `.dev.vars`.
   "vars": {
-    // OpenRouter model used for AI generation (configurable, not hardcoded).
-    "AI_MODEL": "google/gemma-4-31b-it:free"
+    // Direct Google Gemini model used for platform AI generation.
+    "GEMINI_MODEL": "gemini-3.7-flash"
   },
   // Hourly cron that refreshes stale box summaries.
   "triggers": {
