@@ -21,7 +21,7 @@
   "vars": {
     // Primary platform model. Qwen3 30B A3B has a 32K context window and
     // comparatively low Neuron consumption for its capability level.
-    "WORKERS_AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
+    "WORKERS_AI_MODEL": "@cf/ibm-granite/granite-4.0-h-micro",
     // Direct Google Gemini standby model.
     "GEMINI_MODEL": "gemini-3.7-flash"
   },
