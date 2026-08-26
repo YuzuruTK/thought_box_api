@@ -16,6 +16,8 @@ const MAX_RETRIES = 2;
 const MAX_RETRY_AFTER_SECONDS = 8;
 
 export class AiProviderError extends Error {
+  providerKind?: "platform" | "byok" | "workers-ai";
+
   constructor(
     message: string,
     readonly status?: number,
@@ -63,8 +65,6 @@ interface OpenRouterSuccessBody {
     };
   }>;
 }
-
-// ---- helpers ------------------------------------------------------------
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -119,46 +119,29 @@ async function attemptRequest(options: CompletionOptions): Promise<string> {
       try { bodyText = await response.text(); } catch { /* empty */ }
     }
     const retryAfter = parseRetryAfterSecs(response.headers);
-    const providerName =
-      typeof errorMetadata?.provider_name === "string"
-        ? (errorMetadata.provider_name as string)
-        : undefined;
+    const providerName = typeof errorMetadata?.provider_name === "string"
+      ? errorMetadata.provider_name
+      : undefined;
 
-    console.warn(
-      `[openrouter] ${response.status} ${response.statusText} | model=${options.model}`,
-      {
-        status: response.status,
-        statusText: response.statusText,
-        model: options.model,
-        errorCode,
-        errorType: errorMetadata?.error_type,
-        providerName,
-        retryAfter,
-        body: truncate(bodyText, 500),
-      },
-    );
+    console.warn(`[openrouter] ${response.status} ${response.statusText} | model=${options.model}`, {
+      status: response.status,
+      statusText: response.statusText,
+      model: options.model,
+      errorCode,
+      errorType: errorMetadata?.error_type,
+      providerName,
+      retryAfter,
+      body: truncate(bodyText, 500),
+    });
 
     let clientMessage: string;
-    if (response.status === 429) {
-      clientMessage = "AI provider rate limit reached.";
-    } else if (response.status === 401 || response.status === 403) {
-      clientMessage = "AI provider rejected the configured credentials.";
-    } else if (response.status === 402) {
-      clientMessage = "AI provider account has insufficient credits.";
-    } else {
-      clientMessage = "AI provider returned an error.";
-    }
-    if (errorMessage && errorMessage !== "Rate limit exceeded") {
-      clientMessage += ` (${errorMessage})`;
-    }
+    if (response.status === 429) clientMessage = "AI provider rate limit reached.";
+    else if (response.status === 401 || response.status === 403) clientMessage = "AI provider rejected the configured credentials.";
+    else if (response.status === 402) clientMessage = "AI provider account has insufficient credits.";
+    else clientMessage = "AI provider returned an error.";
+    if (errorMessage && errorMessage !== "Rate limit exceeded") clientMessage += ` (${errorMessage})`;
 
-    throw new AiProviderError(
-      clientMessage,
-      response.status,
-      retryAfter,
-      errorCode,
-      providerName,
-    );
+    throw new AiProviderError(clientMessage, response.status, retryAfter, errorCode, providerName);
   }
 
   const body = (await response.json()) as OpenRouterSuccessBody;
@@ -169,45 +152,31 @@ async function attemptRequest(options: CompletionOptions): Promise<string> {
   return content;
 }
 
-/**
- * Call OpenRouter chat completions with retries and timeout handling.
- */
 export async function chatCompletion(options: CompletionOptions): Promise<string> {
   let lastError: Error = new AiProviderError("Request never attempted.");
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await attemptRequest(options);
     } catch (error) {
-      if (
-        error instanceof DOMException &&
-        (error.name === "TimeoutError" || error.name === "AbortError")
-      ) {
+      if (error instanceof DOMException && (error.name === "TimeoutError" || error.name === "AbortError")) {
         lastError = new AiTimeoutError();
       } else {
         lastError = error instanceof Error ? error : new AiProviderError(String(error));
       }
 
       const retryable =
-        (lastError instanceof AiProviderError &&
-          lastError.status !== undefined &&
-          isRetryableStatus(lastError.status)) ||
+        (lastError instanceof AiProviderError && lastError.status !== undefined && isRetryableStatus(lastError.status)) ||
         lastError instanceof AiTimeoutError ||
-        (!(lastError instanceof AiProviderError) &&
-          !(lastError instanceof AiTimeoutError));
+        (!(lastError instanceof AiProviderError) && !(lastError instanceof AiTimeoutError));
 
       if (!retryable || attempt === MAX_RETRIES) break;
 
-      const waitSecs =
-        lastError instanceof AiProviderError &&
-        lastError.retryAfterSeconds !== undefined
-          ? lastError.retryAfterSeconds
-          : undefined;
+      const waitSecs = lastError instanceof AiProviderError && lastError.retryAfterSeconds !== undefined
+        ? lastError.retryAfterSeconds
+        : undefined;
       if (waitSecs !== undefined) {
-        if (waitSecs <= MAX_RETRY_AFTER_SECONDS) {
-          await sleep(waitSecs * 1_000);
-        } else {
-          break;
-        }
+        if (waitSecs <= MAX_RETRY_AFTER_SECONDS) await sleep(waitSecs * 1_000);
+        else break;
       } else {
         await sleep(2 ** attempt * 500);
       }
