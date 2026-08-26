@@ -160,6 +160,11 @@ export class ProviderResolver {
   }
 
   private makePlatform(): ResolvedProvider {
+    // Keep direct construction/backwards-compatible tests working when the
+    // optional Workers AI binding is not supplied. Real Worker requests always
+    // receive env.AI from the Wrangler binding.
+    if (!this.deps.workersAi) return this.makeGemini();
+
     return {
       provider: new WorkersAIProvider(
         this.deps.workersAi,
