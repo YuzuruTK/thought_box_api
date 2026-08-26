@@ -53,6 +53,15 @@ function handleGenerationError(
     return c.json({ error: error.message }, 504);
   }
   if (error instanceof AiProviderError) {
+    // Preserve the original provider status when available (429→429, etc.)
+    // instead of always masking it as 502.
+    if (error.status !== undefined && error.status >= 400 && error.status < 600) {
+      const body: Record<string, unknown> = { error: error.message };
+      if (error.retryAfterSeconds !== undefined) {
+        body.retryAfter = error.retryAfterSeconds;
+      }
+      return c.json(body, error.status);
+    }
     return c.json({ error: error.message }, 502);
   }
   throw error;
