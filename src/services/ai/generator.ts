@@ -6,7 +6,7 @@ import { DocumentService } from "../documentService";
 import { ValidationError, CooldownError } from "../errors";
 import { AiProviderError, AiTimeoutError } from "./openrouter";
 import { ProviderResolver, createResolverDeps } from "./providerResolver";
-import { buildSynthesisPrompt } from "./prompts";
+import { buildSynthesisPrompt, detectPredominantLanguage } from "./prompts";
 import { AiUsageService, estimateTokens } from "./usageService";
 
 const SYNTHESIS_MAX_TOKENS = 1_000;
@@ -53,7 +53,8 @@ export class AiGenerator {
     }
 
     const { box, thoughtContents } = await this.loadBoxContext(userId, boxId);
-    const prompt = buildSynthesisPrompt({ boxName: box.name, boxDescription: box.description, thoughts: thoughtContents });
+    const language = detectPredominantLanguage(thoughtContents);
+    const prompt = buildSynthesisPrompt({ boxName: box.name, boxDescription: box.description, thoughts: thoughtContents, language });
 
     let result: { content: string; model: string };
     let kind: string;
