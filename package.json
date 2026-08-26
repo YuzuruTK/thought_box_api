@@ -7,7 +7,7 @@
     "dev": "wrangler dev",
     "dev:api": "wrangler dev",
     "dev:web": "npm --prefix client run dev",
-    "build": "npm --prefix client run build",
+    "build": "npm --prefix client ci && npm --prefix client run build",
     "deploy": "npm run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "wrangler d1 migrations apply thought_box --local",
