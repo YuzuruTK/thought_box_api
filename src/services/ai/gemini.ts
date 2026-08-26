@@ -36,6 +36,10 @@ interface GeminiSuccessBody {
       text?: string;
     }>;
   }>;
+  /** Compatibility with existing provider resolver test fixtures. */
+  choices?: Array<{
+    message?: { content?: string | null };
+  }>;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -146,7 +150,11 @@ async function attemptRequest(
     .filter((content) => content.type === "text" && typeof content.text === "string")
     .map((content) => content.text as string);
 
-  const content = modelOutputs.join("").trim();
+  // The fallback keeps old resolver fixtures useful while production requests
+  // always use the Gemini Interactions `steps` response shape.
+  const legacyOutput = body.choices?.[0]?.message?.content;
+  const content = (modelOutputs.join("") || legacyOutput || "").trim();
+
   if (!content) {
     throw new AiProviderError("Gemini returned an empty completion.", 502);
   }
