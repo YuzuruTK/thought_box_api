@@ -24,6 +24,7 @@ export class DocumentService {
     title: string,
     content: string,
     model: string,
+    generationProvider?: string,
   ): Promise<GeneratedDocument> {
     const [existing] = await this.db
       .select({ id: generatedDocuments.id })
@@ -39,7 +40,7 @@ export class DocumentService {
     if (existing) {
       const [updated] = await this.db
         .update(generatedDocuments)
-        .set({ title, content, model, updatedAt: new Date() })
+        .set({ title, content, model, updatedAt: new Date(), ...(generationProvider ? { generationProvider } : {}) })
         .where(eq(generatedDocuments.id, existing.id))
         .returning();
       if (!updated) {
@@ -50,7 +51,7 @@ export class DocumentService {
 
     const [created] = await this.db
       .insert(generatedDocuments)
-      .values({ userId, boxId, type, title, content, model })
+      .values({ userId, boxId, type, title, content, model, ...(generationProvider ? { generationProvider } : {}) })
       .returning();
     if (!created) {
       throw new Error("Failed to create generated document.");

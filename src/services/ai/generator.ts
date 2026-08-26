@@ -4,7 +4,8 @@ import { BoxService } from "../boxService";
 import { ThoughtService } from "../thoughtService";
 import { DocumentService } from "../documentService";
 import { ValidationError, CooldownError } from "../errors";
-import { chatCompletion, AiProviderError, AiTimeoutError } from "./openrouter";
+import { AiProviderError, AiTimeoutError } from "./openrouter";
+import { ProviderResolver, createResolverDeps } from "./providerResolver";
 import { buildSynthesisPrompt } from "./prompts";
 
 /** Token limit for the single blended (resume + document) request. */
@@ -53,11 +54,14 @@ export class AiGenerator {
   private readonly thoughts: ThoughtService;
   private readonly documents: DocumentService;
 
+  private readonly resolver: ProviderResolver;
+
   constructor(private readonly env: Env) {
     this.db = getDb(env);
     this.boxes = new BoxService(this.db);
     this.thoughts = new ThoughtService(this.db);
     this.documents = new DocumentService(this.db);
+    this.resolver = new ProviderResolver(createResolverDeps(env));
   }
 
   /**
@@ -87,13 +91,12 @@ export class AiGenerator {
       thoughts: thoughtContents,
     });
 
-    const content = await this.callModel(prompt, SYNTHESIS_MAX_TOKENS);
-    const { resume, document, documentTitle } = splitSynthesisContent(content);
+    const { result, kind } = await this.callModel(userId, prompt, SYNTHESIS_MAX_TOKENS);
+    const { resume, document, documentTitle } = splitSynthesisContent(result.content);
 
     // Persist both the resume and the document from the single request.
-    const model = this.env.AI_MODEL;
-    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, model);
-    await this.documents.upsert(userId, boxId, "document", documentTitle, document, model);
+    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, result.model, kind);
+    await this.documents.upsert(userId, boxId, "document", documentTitle, document, result.model, kind);
   }
 
   // ---- internals ----------------------------------------------------------
@@ -114,15 +117,18 @@ export class AiGenerator {
     };
   }
 
-  private async callModel(prompt: string, maxTokens: number): Promise<string> {
+  private async callModel(
+    userId: number,
+    prompt: string,
+    maxTokens: number,
+  ): Promise<{ result: { content: string; model: string }; kind: string }> {
     try {
-      const raw = await chatCompletion({
-        apiKey: this.env.OPENROUTER_API_KEY,
-        model: this.env.AI_MODEL,
-        messages: [{ role: "user", content: prompt }],
+      const { result, kind } = await this.resolver.complete(userId, {
+        prompt,
         maxTokens,
       });
-      return validateMarkdown(raw);
+      const content = validateMarkdown(result.content);
+      return { result: { content, model: result.model }, kind };
     } catch (error) {
       if (error instanceof AiTimeoutError) {
         throw error;
