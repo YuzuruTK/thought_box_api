@@ -1,3 +1,4 @@
+import { geminiCompletion } from "./gemini";
 import { chatCompletion, AiProviderError } from "./openrouter";
 
 export type AiProviderKind = "platform" | "byok" | "workers-ai";
@@ -29,10 +30,35 @@ export interface AiProvider {
   complete(request: CompletionRequest): Promise<CompletionResult>;
 }
 
-const DEFAULT_API_MODEL = "openrouter/free";
+/**
+ * PlatformGeminiProvider — runs generations directly against Google's Gemini
+ * API using the platform's Gemini API key.
+ */
+export class PlatformGeminiProvider implements AiProvider {
+  readonly kind: AiProviderKind = "platform";
+  readonly name = "Google Gemini (platform key)";
+
+  constructor(
+    private readonly apiKey: string,
+    private readonly model: string,
+  ) {}
+
+  async complete(request: CompletionRequest): Promise<CompletionResult> {
+    const model = request.modelOverride ?? this.model;
+    const content = await geminiCompletion({
+      apiKey: this.apiKey,
+      model,
+      prompt: request.prompt,
+      maxTokens: request.maxTokens,
+    });
+    return { content, model };
+  }
+}
 
 /**
- * PlatformOpenRouterProvider — runs generations on the shared platform key.
+ * PlatformOpenRouterProvider — retained for compatibility with deployments
+ * that instantiate the provider directly. The default resolver now uses
+ * PlatformGeminiProvider.
  */
 export class PlatformOpenRouterProvider implements AiProvider {
   readonly kind: AiProviderKind = "platform";
@@ -57,6 +83,7 @@ export class PlatformOpenRouterProvider implements AiProvider {
 
 /**
  * UserOpenRouterProvider — runs generations on a user's own OpenRouter key.
+ * This remains supported as the existing BYOK path.
  */
 export class UserOpenRouterProvider implements AiProvider {
   readonly kind: AiProviderKind = "byok";
