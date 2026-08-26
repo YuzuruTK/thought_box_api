@@ -105,11 +105,15 @@ export class AiGenerator {
   private async recordFailure(userId: number, prompt: string, error: unknown): Promise<void> {
     const provider = error instanceof AiProviderError || error instanceof AiTimeoutError ? error.providerKind ?? "unknown" : "unknown";
     const errorStatus = error instanceof AiProviderError ? error.status : undefined;
+    const model = provider === "byok"
+      ? this.env.OPENROUTER_MODEL ?? "openrouter/free"
+      : this.env.GEMINI_MODEL;
+
     await this.recordBestEffort({
       userId,
       generationType: "synthesis",
       provider,
-      model: this.env.GEMINI_MODEL,
+      model,
       status: "failed",
       inputTokens: estimateTokens(prompt),
       outputTokens: 0,
