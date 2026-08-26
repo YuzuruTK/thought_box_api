@@ -33,8 +33,9 @@ export interface ProviderResolverDeps {
   platformKey: string;
   model: string;
   platformModel?: string;
-  workersAi: WorkersAiBinding;
-  workersAiModel: string;
+  /** Optional for direct unit tests; production receives env.AI from Wrangler. */
+  workersAi?: WorkersAiBinding;
+  workersAiModel?: string;
 }
 
 export function createResolverDeps(env: Env): ProviderResolverDeps {
@@ -168,7 +169,7 @@ export class ProviderResolver {
     return {
       provider: new WorkersAIProvider(
         this.deps.workersAi,
-        this.deps.workersAiModel,
+        this.deps.workersAiModel ?? "@cf/qwen/qwen3-30b-a3b-fp8",
       ),
       kind: "platform",
     };
