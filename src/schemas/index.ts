@@ -101,3 +101,17 @@ export const createBoxSchema = z.object({
 });
 
 export type CreateBoxInput = z.infer<typeof createBoxSchema>;
+
+// ---------------------------------------------------------------------------
+// Settings (BYOK)
+// ---------------------------------------------------------------------------
+
+export const saveApiKeySchema = z.object({
+  key: z
+    .string()
+    .trim()
+    .min(1, "API key is required.")
+    .max(200, "API key must be at most 200 characters."),
+});
+
+export type SaveApiKeyInput = z.infer<typeof saveApiKeySchema>;
