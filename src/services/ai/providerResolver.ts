@@ -17,7 +17,7 @@
 import type { Env } from "../../env";
 import { getDb, type Database } from "../../db";
 import { UserSettingsService } from "../userSettingsService";
-import { EncryptionService, EncryptionError } from "../encryptionService";
+import { EncryptionService } from "../encryptionService";
 import {
   type AiProvider,
   type CompletionRequest,
@@ -25,9 +25,7 @@ import {
   PlatformOpenRouterProvider,
   UserOpenRouterProvider,
 } from "./providers";
-import { AiProviderError, AiTimeoutError } from "./openrouter";
-
-// ---- dependencies interface (DI for testability) -------------------------
+import { AiProviderError } from "./openrouter";
 
 export interface ProviderResolverDeps {
   settings: UserSettingsService;
@@ -40,9 +38,7 @@ export function createResolverDeps(env: Env): ProviderResolverDeps {
   const db = getDb(env);
   return {
     settings: new UserSettingsService(db),
-    encryption: env.BYOK_KEK_V1
-      ? new EncryptionService(env.BYOK_KEK_V1)
-      : null,
+    encryption: env.BYOK_KEK_V1 ? new EncryptionService(env.BYOK_KEK_V1) : null,
     platformKey: env.OPENROUTER_API_KEY,
     model: env.AI_MODEL,
   };
@@ -53,48 +49,29 @@ export interface ResolvedProvider {
   kind: "platform" | "byok";
 }
 
-// ---- ProviderResolver ---------------------------------------------------
-
 export class ProviderResolver {
   constructor(private readonly deps: ProviderResolverDeps) {}
 
-  /**
-   * Resolve which AI provider to use for a given user.
-   * Returns the provider together with its stable kind for provenance.
-   */
   async resolve(userId: number): Promise<ResolvedProvider> {
     const row = await this.deps.settings.get(userId);
 
-    // No settings row, or aiProvider not set to "byok".
-    if (!row || row.aiProvider !== "byok") {
-      return this.makePlatform();
-    }
+    if (!row || row.aiProvider !== "byok") return this.makePlatform();
 
-    // Need an encryption service and a valid stored key.
     if (!this.deps.encryption) {
-      console.warn(
-        `[byok] user ${userId}: byok enabled but BYOK_KEK_V1 secret not configured`,
-      );
+      console.warn(`[byok] user ${userId}: BYOK_KEK_V1 secret not configured`);
       return this.makePlatform();
     }
     if (!row.encryptedApiKey || !row.apiKeyIv) {
-      console.warn(
-        `[byok] user ${userId}: byok enabled but encrypted key is missing`,
-      );
+      console.warn(`[byok] user ${userId}: encrypted key is missing`);
       return this.makePlatform();
     }
     if (row.apiKeyStatus === "invalid") {
-      console.warn(
-        `[byok] user ${userId}: byok enabled but key status is "invalid"`,
-      );
+      console.warn(`[byok] user ${userId}: key status is invalid`);
       return this.makePlatform();
     }
 
     try {
-      const plaintext = await this.deps.encryption.decrypt(
-        row.encryptedApiKey,
-        row.apiKeyIv,
-      );
+      const plaintext = await this.deps.encryption.decrypt(row.encryptedApiKey, row.apiKeyIv);
       return {
         provider: new UserOpenRouterProvider(plaintext, this.deps.model),
         kind: "byok",
@@ -108,7 +85,6 @@ export class ProviderResolver {
     }
   }
 
-  /** Mark a user's key as invalid so further attempts skip BYOK. */
   async markKeyInvalid(userId: number): Promise<void> {
     await this.deps.settings.upsert(userId, {
       aiProvider: "platform",
@@ -117,23 +93,16 @@ export class ProviderResolver {
     console.warn(`[byok] user ${userId}: key marked invalid after 401/403`);
   }
 
-  /**
-   * Execute a completion with fallback logic:
-   *  - BYOK 401/403 → mark key invalid → retry once on platform.
-   *  - Everything else → rethrow untouched.
-   */
   async complete(
     userId: number,
     request: CompletionRequest,
   ): Promise<{ result: CompletionResult; kind: string }> {
     const resolved = await this.resolve(userId);
-    const p = resolved.provider;
 
     try {
-      const result = await p.complete(request);
+      const result = await resolved.provider.complete(request);
       return { result, kind: resolved.kind };
     } catch (error) {
-      // Only fallback on 401 / 403 when using a user key.
       if (
         resolved.kind === "byok" &&
         error instanceof AiProviderError &&
@@ -141,21 +110,25 @@ export class ProviderResolver {
       ) {
         await this.markKeyInvalid(userId);
         const fallback = this.makePlatform();
-        const result = await fallback.provider.complete(request);
-        return { result, kind: "platform" };
+        try {
+          const result = await fallback.provider.complete(request);
+          return { result, kind: "platform" };
+        } catch (fallbackError) {
+          if (fallbackError instanceof AiProviderError) {
+            fallbackError.providerKind = "platform";
+          }
+          throw fallbackError;
+        }
       }
+
+      if (error instanceof AiProviderError) error.providerKind = resolved.kind;
       throw error;
     }
   }
 
-  // ---- helpers ----------------------------------------------------------
-
   private makePlatform(): ResolvedProvider {
     return {
-      provider: new PlatformOpenRouterProvider(
-        this.deps.platformKey,
-        this.deps.model,
-      ),
+      provider: new PlatformOpenRouterProvider(this.deps.platformKey, this.deps.model),
       kind: "platform",
     };
   }
