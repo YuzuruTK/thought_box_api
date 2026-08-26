@@ -23,7 +23,7 @@ vi.mock("../services/encryptionService", async () => {
 });
 import { signJwt } from "../auth/jwt";
 const JWT_SECRET = "test-jwt-secret-for-settings-tests";
-function makeEnv(overrides: Partial<Env> = {}): Env { return { DB: {} as D1Database, JWT_SECRET, GEMINI_API_KEY: "gemini-platform-test-key", GEMINI_MODEL: "gemini-test-model", ...overrides }; }
+function makeEnv(overrides: Partial<Env> = {}): Env { return { DB: {} as D1Database, AI: {} as Env["AI"], JWT_SECRET, GEMINI_API_KEY: "gemini-platform-test-key", GEMINI_MODEL: "gemini-test-model", WORKERS_AI_MODEL: "test-workers-ai-model", ...overrides }; }
 function createApp() { const app = new Hono<{ Bindings: Env; Variables: AppVariables }>(); app.route("/api/settings", settings); return app; }
 function authHeaders(token: string) { return { Authorization: `Bearer ${token}` }; }
 async function makeToken(): Promise<string> { return signJwt(JWT_SECRET, 1); }
