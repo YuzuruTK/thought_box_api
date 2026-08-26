@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "../auth/AuthContext";
 import { useBoxes, useCreateBox, useDeleteBox } from "../../hooks/useBoxes";
@@ -147,6 +147,13 @@ export function BoxesGrid() {
           >
             {sort.dir === "desc" ? "↓" : "↑"}
           </button>
+
+          <Link
+            to="/app/settings"
+            className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-xs font-medium text-neutral-600 hover:bg-neutral-50"
+          >
+            Settings
+          </Link>
 
           <button
             type="button"
