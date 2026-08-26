@@ -2,27 +2,27 @@
  * ProviderResolver — selects and manages the AI provider per user.
  *
  * Decision logic:
- *  1. ai_provider != "byok"          → platform provider
- *  2. encrypted key missing          → platform provider (warn)
- *  3. api_key_status === "invalid"   → platform provider (warn)
- *  4. BYOK_KEK_V1 secret not set     → platform provider (warn)
- *  5. decrypt failure                → platform provider (warn)
- *  6. otherwise                      → user (BYOK) provider
+ *  1. ai_provider != "byok"          → platform Gemini provider
+ *  2. encrypted key missing          → platform Gemini provider (warn)
+ *  3. api_key_status === "invalid"   → platform Gemini provider (warn)
+ *  4. BYOK_KEK_V1 secret not set     → platform Gemini provider (warn)
+ *  5. decrypt failure                → platform Gemini provider (warn)
+ *  6. otherwise                      → user OpenRouter BYOK provider
  *
  * Fallback (in `complete`):
- *  - 401 / 403 on user key → mark invalid → retry once on platform provider.
+ *  - 401 / 403 on user key → mark invalid → retry once on platform Gemini.
  *  - 429, 5xx, timeout, network exhaustion → rethrow untouched.
  */
 
 import type { Env } from "../../env";
-import { getDb, type Database } from "../../db";
+import { getDb } from "../../db";
 import { UserSettingsService } from "../userSettingsService";
-import { EncryptionService, EncryptionError } from "../encryptionService";
+import { EncryptionService } from "../encryptionService";
 import {
   type AiProvider,
   type CompletionRequest,
   type CompletionResult,
-  PlatformOpenRouterProvider,
+  PlatformGeminiProvider,
   UserOpenRouterProvider,
 } from "./providers";
 import { AiProviderError, AiTimeoutError } from "./openrouter";
@@ -32,7 +32,9 @@ import { AiProviderError, AiTimeoutError } from "./openrouter";
 export interface ProviderResolverDeps {
   settings: UserSettingsService;
   encryption: EncryptionService | null;
+  /** Platform Gemini API key. */
   platformKey: string;
+  /** Platform Gemini model identifier. */
   model: string;
 }
 
@@ -43,8 +45,8 @@ export function createResolverDeps(env: Env): ProviderResolverDeps {
     encryption: env.BYOK_KEK_V1
       ? new EncryptionService(env.BYOK_KEK_V1)
       : null,
-    platformKey: env.OPENROUTER_API_KEY,
-    model: env.AI_MODEL,
+    platformKey: env.GEMINI_API_KEY,
+    model: env.GEMINI_MODEL,
   };
 }
 
@@ -130,7 +132,10 @@ export class ProviderResolver {
           const result = await fallback.provider.complete(request);
           return { result, kind: "platform" };
         } catch (fallbackError) {
-          if (fallbackError instanceof AiProviderError || fallbackError instanceof AiTimeoutError) {
+          if (
+            fallbackError instanceof AiProviderError ||
+            fallbackError instanceof AiTimeoutError
+          ) {
             fallbackError.providerKind = "platform";
           }
           throw fallbackError;
@@ -146,7 +151,7 @@ export class ProviderResolver {
 
   private makePlatform(): ResolvedProvider {
     return {
-      provider: new PlatformOpenRouterProvider(
+      provider: new PlatformGeminiProvider(
         this.deps.platformKey,
         this.deps.model,
       ),
