@@ -16,6 +16,8 @@ export interface Env {
    * no longer uses it.
    */
   OPENROUTER_API_KEY?: string;
+  /** OpenRouter model used by the existing personal-key BYOK path. */
+  OPENROUTER_MODEL?: string;
   /** BYOK master encryption key (set via `wrangler secret put BYOK_KEK_V1`). */
   BYOK_KEK_V1?: string;
 }
