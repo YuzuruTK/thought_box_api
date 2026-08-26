@@ -108,11 +108,12 @@ interface WorkersAiErrorLike {
 /**
  * Cloudflare Workers AI provider.
  *
- * Workers AI is the primary platform provider. The model is configurable so
- * it can be benchmarked/replaced without touching the generator layer.
+ * `kind` is `platform` because it describes the provider category exposed by
+ * the resolver. `name` identifies the concrete backend. This preserves the
+ * existing provider contract while Workers AI becomes the primary backend.
  */
 export class WorkersAIProvider implements AiProvider {
-  readonly kind: AiProviderKind = "workers-ai";
+  readonly kind: AiProviderKind = "platform";
   readonly name = "Cloudflare Workers AI";
 
   constructor(
