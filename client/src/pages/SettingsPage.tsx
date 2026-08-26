@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, getAiSettings, removeAiApiKey, saveAiApiKey, type AiSettings } from "../services/api";
 import { ErrorBanner } from "../components/Feedback";
@@ -26,7 +27,7 @@ export default function SettingsPage() {
 
   useEffect(() => { void load(); }, []);
 
-  async function handleSave(event: React.FormEvent) {
+  async function handleSave(event: FormEvent) {
     event.preventDefault();
     if (!key.trim()) return;
     setSaving(true); setError(null); setSuccess(null);
