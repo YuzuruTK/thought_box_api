@@ -22,15 +22,15 @@ const LANGUAGE_LABELS: Record<SynthesisLanguage, string> = {
 };
 
 const LANGUAGE_WORDS: Record<SynthesisLanguage, string[]> = {
-  "pt-BR": ["não", "você", "para", "uma", "que", "com", "dos", "das", "está", "são", "como", "por", "sobre", "projeto", "pensamento", "ideia", "preciso", "quero", "também", "isso"],
-  en: ["the", "and", "is", "to", "of", "in", "for", "with", "this", "that", "are", "from", "about", "project", "thought", "idea", "need", "want", "also", "it"],
-  es: ["el", "la", "los", "las", "que", "para", "una", "con", "está", "son", "como", "por", "sobre", "proyecto", "pensamiento", "idea", "necesito", "quiero", "también", "esto"],
+  "pt-BR": ["não", "você", "para", "uma", "que", "com", "dos", "das", "do", "da", "no", "na", "em", "os", "as", "um", "eu", "meu", "minha", "meus", "minhas", "está", "são", "como", "por", "sobre", "projeto", "pensamento", "pensamentos", "ideia", "ideias", "preciso", "precisa", "quero", "queremos", "também", "isso", "esse", "essa", "esses", "essas", "porque", "onde", "quando", "hoje", "deve", "devem"],
+  en: ["the", "and", "is", "to", "of", "in", "for", "with", "this", "that", "are", "from", "about", "project", "thought", "thoughts", "idea", "ideas", "need", "needs", "want", "wants", "also", "it", "my", "mine", "your", "you", "because", "where", "when", "today", "should", "must"],
+  es: ["el", "la", "los", "las", "que", "para", "una", "con", "del", "al", "en", "un", "yo", "mi", "mis", "está", "están", "son", "como", "por", "sobre", "proyecto", "pensamiento", "pensamientos", "idea", "ideas", "necesito", "necesita", "quiero", "queremos", "también", "esto", "este", "esta", "estos", "estas", "porque", "donde", "cuando", "hoy", "debe", "deben"],
 };
 
 /**
  * Detect the predominant language without making another AI call.
- * Scores are based on language-specific words, so a previous synthesis or the
- * model's default language cannot influence the result.
+ * Scores are based on language words, so a previous synthesis or the model's
+ * default language cannot influence the result.
  */
 export function detectPredominantLanguage(thoughts: string[]): SynthesisLanguage {
   const scores: Record<SynthesisLanguage, number> = { "pt-BR": 0, en: 0, es: 0 };
