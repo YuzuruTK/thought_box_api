@@ -109,7 +109,7 @@ export class AiGenerator {
       userId,
       generationType: "synthesis",
       provider,
-      model: this.env.AI_MODEL,
+      model: this.env.GEMINI_MODEL,
       status: "failed",
       inputTokens: estimateTokens(prompt),
       outputTokens: 0,
