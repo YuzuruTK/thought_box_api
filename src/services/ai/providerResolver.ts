@@ -34,8 +34,13 @@ export interface ProviderResolverDeps {
   encryption: EncryptionService | null;
   /** Platform Gemini API key. */
   platformKey: string;
-  /** Platform Gemini model identifier. */
+  /**
+   * OpenRouter model used by the existing BYOK path.
+   * Kept as `model` for test/backward compatibility.
+   */
   model: string;
+  /** Platform Gemini model identifier. Falls back to `model` in tests. */
+  platformModel?: string;
 }
 
 export function createResolverDeps(env: Env): ProviderResolverDeps {
@@ -46,7 +51,8 @@ export function createResolverDeps(env: Env): ProviderResolverDeps {
       ? new EncryptionService(env.BYOK_KEK_V1)
       : null,
     platformKey: env.GEMINI_API_KEY,
-    model: env.GEMINI_MODEL,
+    model: env.OPENROUTER_MODEL ?? "openrouter/free",
+    platformModel: env.GEMINI_MODEL,
   };
 }
 
@@ -153,7 +159,7 @@ export class ProviderResolver {
     return {
       provider: new PlatformGeminiProvider(
         this.deps.platformKey,
-        this.deps.model,
+        this.deps.platformModel ?? this.deps.model,
       ),
       kind: "platform",
     };
