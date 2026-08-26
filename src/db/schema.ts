@@ -159,6 +159,38 @@ export const userSettings = sqliteTable("user_settings", {
   index("user_settings_user_id_idx").on(table.userId),
 ]);
 
+/**
+ * AI generation usage events. Token counts are estimates until provider
+ * usage metadata is exposed by the current client; this keeps analytics
+ * explicitly separate from billing-grade measurements.
+ */
+export const aiUsage = sqliteTable("ai_usage", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  /** 'summary' | 'document' | 'synthesis'. */
+  generationType: text("generation_type").notNull(),
+  /** 'platform' | 'byok' | 'workers-ai' | 'unknown'. */
+  provider: text("provider").notNull(),
+  model: text("model").notNull(),
+  /** 'success' | 'failed'. */
+  status: text("status").notNull(),
+  inputTokens: integer("input_tokens"),
+  outputTokens: integer("output_tokens"),
+  totalTokens: integer("total_tokens"),
+  tokensEstimated: integer("tokens_estimated", { mode: "boolean" }).notNull().default(true),
+  errorStatus: integer("error_status"),
+  createdAt: integer("created_at", { mode: "timestamp_ms" })
+    .notNull()
+    .default(sql`(unixepoch() * 1000)`),
+}, (table) => [
+  index("ai_usage_user_id_idx").on(table.userId),
+  index("ai_usage_created_at_idx").on(table.createdAt),
+  index("ai_usage_provider_idx").on(table.provider),
+  index("ai_usage_generation_type_idx").on(table.generationType),
+]);
+
 // ---- Inferred types -------------------------------------------------------
 
 export type User = typeof users.$inferSelect;
@@ -173,3 +205,5 @@ export type GeneratedDocument = typeof generatedDocuments.$inferSelect;
 export type NewGeneratedDocument = typeof generatedDocuments.$inferInsert;
 export type UserSettings = typeof userSettings.$inferSelect;
 export type NewUserSettings = typeof userSettings.$inferInsert;
+export type AiUsage = typeof aiUsage.$inferSelect;
+export type NewAiUsage = typeof aiUsage.$inferInsert;

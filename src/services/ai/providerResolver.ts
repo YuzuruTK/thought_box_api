@@ -53,24 +53,16 @@ export interface ResolvedProvider {
   kind: "platform" | "byok";
 }
 
-// ---- ProviderResolver ---------------------------------------------------
-
 export class ProviderResolver {
   constructor(private readonly deps: ProviderResolverDeps) {}
 
-  /**
-   * Resolve which AI provider to use for a given user.
-   * Returns the provider together with its stable kind for provenance.
-   */
   async resolve(userId: number): Promise<ResolvedProvider> {
     const row = await this.deps.settings.get(userId);
 
-    // No settings row, or aiProvider not set to "byok".
     if (!row || row.aiProvider !== "byok") {
       return this.makePlatform();
     }
 
-    // Need an encryption service and a valid stored key.
     if (!this.deps.encryption) {
       console.warn(
         `[byok] user ${userId}: byok enabled but BYOK_KEK_V1 secret not configured`,
@@ -108,7 +100,6 @@ export class ProviderResolver {
     }
   }
 
-  /** Mark a user's key as invalid so further attempts skip BYOK. */
   async markKeyInvalid(userId: number): Promise<void> {
     await this.deps.settings.upsert(userId, {
       aiProvider: "platform",
@@ -117,11 +108,6 @@ export class ProviderResolver {
     console.warn(`[byok] user ${userId}: key marked invalid after 401/403`);
   }
 
-  /**
-   * Execute a completion with fallback logic:
-   *  - BYOK 401/403 → mark key invalid → retry once on platform.
-   *  - Everything else → rethrow untouched.
-   */
   async complete(
     userId: number,
     request: CompletionRequest,
@@ -133,7 +119,6 @@ export class ProviderResolver {
       const result = await p.complete(request);
       return { result, kind: resolved.kind };
     } catch (error) {
-      // Only fallback on 401 / 403 when using a user key.
       if (
         resolved.kind === "byok" &&
         error instanceof AiProviderError &&
@@ -141,14 +126,23 @@ export class ProviderResolver {
       ) {
         await this.markKeyInvalid(userId);
         const fallback = this.makePlatform();
-        const result = await fallback.provider.complete(request);
-        return { result, kind: "platform" };
+        try {
+          const result = await fallback.provider.complete(request);
+          return { result, kind: "platform" };
+        } catch (fallbackError) {
+          if (fallbackError instanceof AiProviderError || fallbackError instanceof AiTimeoutError) {
+            fallbackError.providerKind = "platform";
+          }
+          throw fallbackError;
+        }
+      }
+
+      if (error instanceof AiProviderError || error instanceof AiTimeoutError) {
+        error.providerKind = resolved.kind;
       }
       throw error;
     }
   }
-
-  // ---- helpers ----------------------------------------------------------
 
   private makePlatform(): ResolvedProvider {
     return {

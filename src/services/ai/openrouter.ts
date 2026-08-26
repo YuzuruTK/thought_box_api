@@ -16,6 +16,8 @@ const MAX_RETRIES = 2;
 const MAX_RETRY_AFTER_SECONDS = 8;
 
 export class AiProviderError extends Error {
+  providerKind?: "platform" | "byok" | "workers-ai";
+
   constructor(
     message: string,
     readonly status?: number,
@@ -29,6 +31,8 @@ export class AiProviderError extends Error {
 }
 
 export class AiTimeoutError extends Error {
+  providerKind?: "platform" | "byok" | "workers-ai";
+
   constructor() {
     super("AI request timed out.");
     this.name = "AiTimeoutError";
