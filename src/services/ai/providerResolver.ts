@@ -2,16 +2,14 @@
  * ProviderResolver — selects and manages the AI provider per user.
  *
  * Decision logic:
- *  1. ai_provider != "byok"          → platform Gemini provider
- *  2. encrypted key missing          → platform Gemini provider (warn)
- *  3. api_key_status === "invalid"   → platform Gemini provider (warn)
- *  4. BYOK_KEK_V1 secret not set     → platform Gemini provider (warn)
- *  5. decrypt failure                → platform Gemini provider (warn)
- *  6. otherwise                      → user OpenRouter BYOK provider
+ *  1. ai_provider == "byok" with a valid stored key → user OpenRouter BYOK
+ *  2. otherwise → Cloudflare Workers AI (primary platform provider)
  *
- * Fallback (in `complete`):
- *  - 401 / 403 on user key → mark invalid → retry once on platform Gemini.
- *  - 429, 5xx, timeout, network exhaustion → rethrow untouched.
+ * Platform fallback:
+ *  - Workers AI rate limits, access denial/free-tier exhaustion and 5xx errors
+ *    fall back once to the direct Gemini platform provider.
+ *
+ * OpenRouter is never selected as the platform default.
  */
 
 import type { Env } from "../../env";
@@ -24,23 +22,20 @@ import {
   type CompletionResult,
   PlatformGeminiProvider,
   UserOpenRouterProvider,
+  WorkersAIProvider,
+  type WorkersAiBinding,
 } from "./providers";
 import { AiProviderError, AiTimeoutError } from "./openrouter";
-
-// ---- dependencies interface (DI for testability) -------------------------
 
 export interface ProviderResolverDeps {
   settings: UserSettingsService;
   encryption: EncryptionService | null;
-  /** Platform Gemini API key. */
   platformKey: string;
-  /**
-   * OpenRouter model used by the existing BYOK path.
-   * Kept as `model` for test/backward compatibility.
-   */
   model: string;
-  /** Platform Gemini model identifier. Falls back to `model` in tests. */
   platformModel?: string;
+  /** Optional for direct unit tests; production receives env.AI from Wrangler. */
+  workersAi?: WorkersAiBinding;
+  workersAiModel?: string;
 }
 
 export function createResolverDeps(env: Env): ProviderResolverDeps {
@@ -53,6 +48,8 @@ export function createResolverDeps(env: Env): ProviderResolverDeps {
     platformKey: env.GEMINI_API_KEY,
     model: env.OPENROUTER_MODEL ?? "openrouter/free",
     platformModel: env.GEMINI_MODEL,
+    workersAi: env.AI,
+    workersAiModel: env.WORKERS_AI_MODEL,
   };
 }
 
@@ -121,10 +118,9 @@ export class ProviderResolver {
     request: CompletionRequest,
   ): Promise<{ result: CompletionResult; kind: string }> {
     const resolved = await this.resolve(userId);
-    const p = resolved.provider;
 
     try {
-      const result = await p.complete(request);
+      const result = await resolved.provider.complete(request);
       return { result, kind: resolved.kind };
     } catch (error) {
       if (
@@ -133,29 +129,53 @@ export class ProviderResolver {
         (error.status === 401 || error.status === 403)
       ) {
         await this.markKeyInvalid(userId);
-        const fallback = this.makePlatform();
-        try {
-          const result = await fallback.provider.complete(request);
-          return { result, kind: "platform" };
-        } catch (fallbackError) {
-          if (
-            fallbackError instanceof AiProviderError ||
-            fallbackError instanceof AiTimeoutError
-          ) {
-            fallbackError.providerKind = "platform";
-          }
-          throw fallbackError;
-        }
+        return this.completeWithGemini(request);
       }
 
-      if (error instanceof AiProviderError || error instanceof AiTimeoutError) {
-        error.providerKind = resolved.kind;
+      if (
+        resolved.provider instanceof WorkersAIProvider &&
+        this.shouldFallbackToGemini(error)
+      ) {
+        console.warn(
+          "[ai] Workers AI unavailable; falling back to Gemini standby provider",
+        );
+        return this.completeWithGemini(request);
       }
+
+      this.annotateError(error, resolved.kind);
       throw error;
     }
   }
 
+  private async completeWithGemini(
+    request: CompletionRequest,
+  ): Promise<{ result: CompletionResult; kind: string }> {
+    const fallback = this.makeGemini();
+    try {
+      const result = await fallback.provider.complete(request);
+      return { result, kind: "platform" };
+    } catch (fallbackError) {
+      this.annotateError(fallbackError, "platform");
+      throw fallbackError;
+    }
+  }
+
   private makePlatform(): ResolvedProvider {
+    // Keep direct construction/backwards-compatible tests working when the
+    // optional Workers AI binding is not supplied. Real Worker requests always
+    // receive env.AI from the Wrangler binding.
+    if (!this.deps.workersAi) return this.makeGemini();
+
+    return {
+      provider: new WorkersAIProvider(
+        this.deps.workersAi,
+        this.deps.workersAiModel ?? "@cf/qwen/qwen3-30b-a3b-fp8",
+      ),
+      kind: "platform",
+    };
+  }
+
+  private makeGemini(): ResolvedProvider {
     return {
       provider: new PlatformGeminiProvider(
         this.deps.platformKey,
@@ -163,5 +183,26 @@ export class ProviderResolver {
       ),
       kind: "platform",
     };
+  }
+
+  private shouldFallbackToGemini(error: unknown): boolean {
+    if (error instanceof AiTimeoutError) return true;
+    if (!(error instanceof AiProviderError)) return false;
+    if (error.status === 403 || error.status === 429) return true;
+    if (error.status !== undefined && error.status >= 500) return true;
+
+    // Cloudflare may expose provider-specific errors without an HTTP status.
+    // 3040 is the documented out-of-capacity code; 5035 is used for models
+    // unavailable on the current plan. Both should activate the standby.
+    if (error.providerCode === 3040 || error.providerCode === 5035) return true;
+
+    const message = error.message.toLowerCase();
+    return message.includes("out of capacity") || message.includes("rate limit");
+  }
+
+  private annotateError(error: unknown, kind: "platform" | "byok"): void {
+    if (error instanceof AiProviderError || error instanceof AiTimeoutError) {
+      error.providerKind = kind;
+    }
   }
 }

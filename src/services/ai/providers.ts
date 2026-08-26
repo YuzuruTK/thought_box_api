@@ -16,24 +16,13 @@ export interface CompletionResult {
   model: string;
 }
 
-/**
- * AiProvider — the abstraction over any AI backend.
- *
- * Implementations must never leak API keys: they return only the generated
- * content and model. Failures are raised as AiProviderError / AiTimeoutError.
- */
 export interface AiProvider {
-  /** Stable identifier for provenance metadata ('platform' | 'byok' | ...). */
   readonly kind: AiProviderKind;
-  /** Human/UI-facing provider name. */
   readonly name: string;
   complete(request: CompletionRequest): Promise<CompletionResult>;
 }
 
-/**
- * PlatformGeminiProvider — runs generations directly against Google's Gemini
- * API using the platform's Gemini API key.
- */
+/** Direct Gemini provider retained as the platform standby provider. */
 export class PlatformGeminiProvider implements AiProvider {
   readonly kind: AiProviderKind = "platform";
   readonly name = "Google Gemini (platform key)";
@@ -56,9 +45,8 @@ export class PlatformGeminiProvider implements AiProvider {
 }
 
 /**
- * PlatformOpenRouterProvider — retained for compatibility with deployments
- * that instantiate the provider directly. The default resolver now uses
- * PlatformGeminiProvider.
+ * Legacy platform OpenRouter provider retained for compatibility with older
+ * direct consumers. It is no longer selected by the platform resolver.
  */
 export class PlatformOpenRouterProvider implements AiProvider {
   readonly kind: AiProviderKind = "platform";
@@ -81,10 +69,7 @@ export class PlatformOpenRouterProvider implements AiProvider {
   }
 }
 
-/**
- * UserOpenRouterProvider — runs generations on a user's own OpenRouter key.
- * This remains supported as the existing BYOK path.
- */
+/** User-owned OpenRouter provider (BYOK). */
 export class UserOpenRouterProvider implements AiProvider {
   readonly kind: AiProviderKind = "byok";
   readonly name = "Personal OpenRouter (your key)";
@@ -106,15 +91,109 @@ export class UserOpenRouterProvider implements AiProvider {
   }
 }
 
+export interface WorkersAiBinding {
+  run(model: string, input: {
+    messages: Array<{ role: "system" | "user" | "assistant" | "tool"; content: string }>;
+    max_tokens?: number;
+    temperature?: number;
+  }): Promise<unknown>;
+}
+
+interface WorkersAiErrorLike {
+  status?: unknown;
+  code?: unknown;
+  message?: unknown;
+}
+
 /**
- * WorkersAIProvider — a stub so the provider seam exists. Not implemented in
- * Issue #1. Throws if selected.
+ * Cloudflare Workers AI provider.
+ *
+ * `kind` is `platform` because it describes the provider category exposed by
+ * the resolver. `name` identifies the concrete backend. This preserves the
+ * existing provider contract while Workers AI becomes the primary backend.
  */
 export class WorkersAIProvider implements AiProvider {
-  readonly kind: AiProviderKind = "workers-ai";
-  readonly name = "Workers AI";
+  readonly kind: AiProviderKind = "platform";
+  readonly name = "Cloudflare Workers AI";
 
-  async complete(_request: CompletionRequest): Promise<CompletionResult> {
-    throw new AiProviderError("WorkersAIProvider is not implemented yet.", 501);
+  constructor(
+    private readonly ai: WorkersAiBinding,
+    private readonly model: string,
+  ) {}
+
+  async complete(request: CompletionRequest): Promise<CompletionResult> {
+    const model = request.modelOverride ?? this.model;
+
+    try {
+      const raw = await this.ai.run(model, {
+        messages: [{ role: "user", content: request.prompt }],
+        max_tokens: request.maxTokens,
+        temperature: 0.3,
+      });
+
+      const content = extractWorkersAiContent(raw);
+      if (!content) {
+        throw new AiProviderError(
+          "Cloudflare Workers AI returned an empty completion.",
+          502,
+        );
+      }
+
+      return { content, model };
+    } catch (error) {
+      if (error instanceof AiProviderError) throw error;
+
+      const details = isWorkersAiError(error) ? error : undefined;
+      const status = typeof details?.status === "number" ? details.status : undefined;
+      const providerCode = typeof details?.code === "number" ? details.code : undefined;
+      const message =
+        typeof details?.message === "string"
+          ? details.message
+          : error instanceof Error
+            ? error.message
+            : "Unknown Cloudflare Workers AI error.";
+
+      console.warn("[workers-ai] inference failed", {
+        model,
+        status,
+        providerCode,
+        message: message.slice(0, 500),
+      });
+
+      throw new AiProviderError(
+        workersAiClientMessage(status, message),
+        status,
+        undefined,
+        providerCode,
+        "Cloudflare Workers AI",
+      );
+    }
   }
+}
+
+function isWorkersAiError(value: unknown): value is WorkersAiErrorLike {
+  return typeof value === "object" && value !== null;
+}
+
+function workersAiClientMessage(status: number | undefined, message: string): string {
+  if (status === 429) return "Cloudflare Workers AI rate limit reached.";
+  if (status === 403) return "Cloudflare Workers AI access was denied.";
+  if (status !== undefined && status >= 500) return "Cloudflare Workers AI returned a server error.";
+  return message
+    ? `Cloudflare Workers AI returned an error. (${message})`
+    : "Cloudflare Workers AI returned an error.";
+}
+
+function extractWorkersAiContent(raw: unknown): string | null {
+  if (typeof raw === "string") return raw.trim() || null;
+  if (!raw || typeof raw !== "object") return null;
+
+  const value = raw as {
+    response?: unknown;
+    choices?: Array<{ message?: { content?: unknown } }>;
+  };
+
+  if (typeof value.response === "string") return value.response.trim() || null;
+  const content = value.choices?.[0]?.message?.content;
+  return typeof content === "string" ? content.trim() || null : null;
 }
