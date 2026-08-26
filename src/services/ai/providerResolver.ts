@@ -131,8 +131,13 @@ export class ProviderResolver {
         return this.completeWithGemini(request);
       }
 
-      if (resolved.provider instanceof WorkersAIProvider && this.shouldFallbackToGemini(error)) {
-        console.warn("[ai] Workers AI unavailable; falling back to Gemini standby provider");
+      if (
+        resolved.provider instanceof WorkersAIProvider &&
+        this.shouldFallbackToGemini(error)
+      ) {
+        console.warn(
+          "[ai] Workers AI unavailable; falling back to Gemini standby provider",
+        );
         return this.completeWithGemini(request);
       }
 
@@ -177,7 +182,16 @@ export class ProviderResolver {
   private shouldFallbackToGemini(error: unknown): boolean {
     if (error instanceof AiTimeoutError) return true;
     if (!(error instanceof AiProviderError)) return false;
-    return error.status === 403 || error.status === 429 || (error.status !== undefined && error.status >= 500);
+    if (error.status === 403 || error.status === 429) return true;
+    if (error.status !== undefined && error.status >= 500) return true;
+
+    // Cloudflare may expose provider-specific errors without an HTTP status.
+    // 3040 is the documented out-of-capacity code; 5035 is used for models
+    // unavailable on the current plan. Both should activate the standby.
+    if (error.providerCode === 3040 || error.providerCode === 5035) return true;
+
+    const message = error.message.toLowerCase();
+    return message.includes("out of capacity") || message.includes("rate limit");
   }
 
   private annotateError(error: unknown, kind: "platform" | "byok"): void {
