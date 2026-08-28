@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useDocuments, useSynthesize } from "../../hooks/useDocuments";
 import { Markdown } from "../../lib/markdown";
 import { EmptyState, ErrorBanner } from "../../components/Feedback";
+import { Button } from "../../components/ui/Button";
 import { ApiError } from "../../services/api";
 import { formatTime } from "../../lib/dates";
 
@@ -56,38 +57,37 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
       )}
 
       {/* Toolbar: cooldown hint + synthesize button */}
-      <div className="flex items-center justify-end gap-3 border-b border-neutral-200 bg-white px-4 py-2">
+      <div className="flex items-center justify-end gap-3 border-b border-border bg-surface px-4 py-2">
         {onCooldown && (
-          <span className="text-xs text-neutral-400">Available in {minutesLeft} min</span>
+          <span className="text-xs text-foreground-muted">Available in {minutesLeft} min</span>
         )}
-        <button
-          type="button"
+        <Button
+          size="sm"
           onClick={() => synth.mutate()}
           disabled={isGenerating || onCooldown || docsQuery.isPending}
-          className="rounded-md bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {buttonLabel}
-        </button>
+        </Button>
       </div>
 
       {/* Blended output: resume on top, structured document below */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {docsQuery.isPending ? (
-          <p className="text-sm text-neutral-400">Loading…</p>
+          <p className="text-sm text-foreground-muted">Loading…</p>
         ) : isGenerating && !doc ? (
-          <p className="text-sm text-neutral-400">Synthesizing…</p>
+          <p className="text-sm text-foreground-muted">Synthesizing…</p>
         ) : doc ? (
-          <article className="mx-auto max-w-3xl rounded-lg border border-neutral-200 bg-white p-5 shadow-sm md:p-8">
+          <article className="mx-auto max-w-3xl rounded-lg border border-border bg-surface p-5 shadow-sm md:p-8">
             {summaryResume && summaryResume.content && (
               <>
-                <p className="mb-5 text-sm italic leading-snug text-neutral-600">
+                <p className="mb-5 text-sm italic leading-snug text-foreground-muted">
                   {summaryResume.content}
                 </p>
-                <hr className="mb-5 border-neutral-200" />
+                <hr className="mb-5 border-border" />
               </>
             )}
             <Markdown content={doc.content} />
-            <footer className="mt-8 border-t border-neutral-100 pt-3 text-[11px] text-neutral-400">
+            <footer className="mt-8 border-t border-border pt-3 text-[11px] text-foreground-muted">
               Synthesized {formatTime(doc.updatedAt)} · {doc.model}
             </footer>
           </article>

@@ -8,6 +8,9 @@ import { ApiError } from "../../services/api";
 import type { Box } from "../../services/api";
 import { ErrorBanner } from "../../components/Feedback";
 import { formatShortDate } from "../../lib/dates";
+import { Button } from "../../components/ui/Button";
+import { Card } from "../../components/ui/Card";
+import { Input } from "../../components/ui/Input";
 
 const boxNameSchema = z.string().trim().min(1).max(100);
 
@@ -109,31 +112,30 @@ export function BoxesGrid() {
   }
 
   return (
-    <div className="min-h-dvh bg-neutral-50 text-neutral-900">
+    <div className="min-h-dvh bg-surface-muted text-foreground">
       <div className="mx-auto max-w-5xl px-4 py-8 md:px-6">
         <header className="mb-6 flex flex-wrap items-center gap-3">
           <h1 className="mr-auto text-lg font-semibold tracking-tight">Thought Box</h1>
 
           {/* Sort field */}
-          <nav className="flex overflow-hidden rounded-md border border-neutral-200 bg-white">
+          <nav className="flex overflow-hidden rounded-md border border-border bg-surface">
             {(
               [
                 { id: "created", label: "Created" },
                 { id: "edited", label: "Last edited" },
               ] as const
             ).map(({ id, label }) => (
-              <button
+              <Button
                 key={id}
-                type="button"
+                size="sm"
+                variant={sort.field === id ? "primary" : "ghost"}
                 onClick={() => setSort((s) => ({ ...s, field: id }))}
-                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-                  sort.field === id
-                    ? "bg-neutral-900 text-white"
-                    : "bg-white text-neutral-600 hover:bg-neutral-50"
-                }`}
+                className={
+                  sort.field === id ? "rounded-none" : "rounded-none hover:bg-surface-muted"
+                }
               >
                 {label}
-              </button>
+              </Button>
             ))}
           </nav>
 
@@ -143,18 +145,14 @@ export function BoxesGrid() {
             onClick={() => setSort((s) => ({ ...s, dir: s.dir === "desc" ? "asc" : "desc" }))}
             title={sort.dir === "desc" ? "Descending" : "Ascending"}
             aria-label={sort.dir === "desc" ? "Sort descending" : "Sort ascending"}
-            className="rounded-md border border-neutral-200 bg-white px-2.5 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
+            className="rounded-md border border-border bg-surface px-2.5 py-1.5 text-sm text-foreground-muted hover:bg-surface-muted"
           >
             {sort.dir === "desc" ? "↓" : "↑"}
           </button>
 
-          <button
-            type="button"
-            onClick={logout}
-            className="rounded px-2 py-1.5 text-xs text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
-          >
+          <Button variant="ghost" size="sm" onClick={logout}>
             Log out
-          </button>
+          </Button>
         </header>
 
         {(error || boxesQuery.error) && (
@@ -171,16 +169,16 @@ export function BoxesGrid() {
         )}
 
         {boxesQuery.isPending ? (
-          <p className="text-sm text-neutral-400">Loading boxes…</p>
+          <p className="text-sm text-foreground-muted">Loading boxes…</p>
         ) : (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {/* "+ New Box" — always the first cell */}
             {creating ? (
               <form
                 onSubmit={submitNewBox}
-                className="flex min-h-[150px] flex-col justify-center rounded-xl border border-dashed border-neutral-300 bg-white p-4 shadow-sm"
+                className="flex min-h-[150px] flex-col justify-center rounded-xl border border-dashed border-border bg-surface p-4 shadow-sm"
               >
-                <input
+                <Input
                   ref={inputRef}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
@@ -193,16 +191,15 @@ export function BoxesGrid() {
                   placeholder="Box name"
                   maxLength={100}
                   autoComplete="off"
-                  className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-400"
                   aria-label="New box name"
                 />
-                <p className="mt-2 text-[11px] text-neutral-400">Enter to create · Esc to cancel</p>
+                <p className="mt-2 text-[11px] text-foreground-muted">Enter to create · Esc to cancel</p>
               </form>
             ) : (
               <button
                 type="button"
                 onClick={() => setCreating(true)}
-                className="flex min-h-[150px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-neutral-300 bg-transparent p-4 text-neutral-400 transition-colors hover:border-neutral-400 hover:text-neutral-600"
+                className="flex min-h-[150px] flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-transparent p-4 text-foreground-muted transition-colors hover:border-foreground-muted hover:text-foreground"
               >
                 <span className="text-2xl leading-none">+</span>
                 <span className="text-sm font-medium">New Box</span>
@@ -237,23 +234,23 @@ function BoxCard({
   deleting: boolean;
 }) {
   return (
-    <div className="group relative flex min-h-[150px] flex-col rounded-xl border border-neutral-200 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+    <Card interactive className="group relative flex min-h-[150px] flex-col p-4">
       <button type="button" onClick={onSelect} className="flex min-h-0 flex-1 flex-col text-left">
-        <h3 className="truncate pr-6 text-sm font-medium text-neutral-900">{box.name}</h3>
-        <p className="mt-0.5 text-[11px] text-neutral-400">
+        <h3 className="truncate pr-6 text-sm font-medium text-foreground">{box.name}</h3>
+        <p className="mt-0.5 text-[11px] text-foreground-muted">
           {box.thoughtCount} {box.thoughtCount === 1 ? "thought" : "thoughts"}
         </p>
 
         {/* Summary preview — short plain-text resume of the cached AI summary */}
         {box.summaryPreview ? (
-          <p className="mt-2 line-clamp-2 text-sm leading-snug text-neutral-600">
+          <p className="mt-2 line-clamp-2 text-sm leading-snug text-foreground-muted">
             {box.summaryPreview}
           </p>
         ) : (
-          <p className="mt-2 text-sm italic leading-snug text-neutral-300">No summary yet.</p>
+          <p className="mt-2 text-sm italic leading-snug text-foreground-faint">No summary yet.</p>
         )}
 
-        <div className="mt-auto pt-3 text-[11px] text-neutral-400">
+        <div className="mt-auto pt-3 text-[11px] text-foreground-muted">
           Created {formatShortDate(box.createdAt)}
           {box.lastActivityAt && <> · Edited {formatShortDate(box.lastActivityAt)}</>}
         </div>
@@ -266,12 +263,12 @@ function BoxCard({
           onDelete();
         }}
         disabled={deleting}
-        className="absolute top-2 right-2 hidden rounded p-1 text-xs text-neutral-300 hover:bg-red-50 hover:text-red-500 group-hover:block disabled:cursor-wait"
+        className="absolute top-2 right-2 hidden rounded p-1 text-xs text-foreground-faint hover:bg-danger-surface hover:text-danger-muted group-hover:block disabled:cursor-wait"
         title={`Delete ${box.name}`}
         aria-label={`Delete ${box.name}`}
       >
         ✕
       </button>
-    </div>
+    </Card>
   );
 }

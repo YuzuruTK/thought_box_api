@@ -4,6 +4,7 @@ import { useCreateThought, useDeleteThought, useThoughts } from "../../hooks/use
 import { ApiError } from "../../services/api";
 import type { Thought } from "../../services/api";
 import { EmptyState, ErrorBanner } from "../../components/Feedback";
+import { Input } from "../../components/ui/Input";
 import { formatTimestamp } from "../../lib/dates";
 
 interface ThoughtsPanelProps {
@@ -59,7 +60,7 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {thoughtsQuery.isPending ? (
-          <p className="text-sm text-neutral-400">Loading thoughts…</p>
+          <p className="text-sm text-foreground-muted">Loading thoughts…</p>
         ) : thoughts.length === 0 ? (
           <EmptyState
             title="No thoughts yet."
@@ -80,15 +81,14 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
       </div>
 
       {/* Fast thought entry */}
-      <form onSubmit={handleSubmit} className="border-t border-neutral-200 bg-white px-4 py-3">
-        <input
+      <form onSubmit={handleSubmit} className="border-t border-border bg-surface px-4 py-3">
+        <Input
           ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Type a thought, press Enter…"
           maxLength={10_000}
           autoComplete="off"
-          className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm outline-none placeholder:text-neutral-400 focus:border-neutral-500 focus:ring-1 focus:ring-neutral-400"
           aria-label="New thought"
         />
       </form>
@@ -106,16 +106,16 @@ function ThoughtCard({
   deleting: boolean;
 }) {
   return (
-    <li className="group relative rounded-lg border border-neutral-200 bg-white px-4 py-3 shadow-sm">
-      <p className="whitespace-pre-wrap pr-6 text-sm leading-relaxed text-neutral-800">
+    <li className="group relative rounded-lg border border-border bg-surface px-4 py-3 shadow-sm">
+      <p className="whitespace-pre-wrap pr-6 text-sm leading-relaxed text-foreground">
         {thought.content}
       </p>
-      <div className="mt-1.5 text-[11px] text-neutral-400">{formatTimestamp(thought.createdAt)}</div>
+      <div className="mt-1.5 text-[11px] text-foreground-muted">{formatTimestamp(thought.createdAt)}</div>
       <button
         type="button"
         onClick={onDelete}
         disabled={deleting}
-        className="absolute top-2 right-2 hidden rounded p-1 text-xs text-neutral-300 hover:bg-red-50 hover:text-red-500 group-hover:block disabled:cursor-wait"
+        className="absolute top-2 right-2 hidden rounded p-1 text-xs text-foreground-faint hover:bg-danger-surface hover:text-danger-muted group-hover:block disabled:cursor-wait"
         title="Delete thought"
         aria-label="Delete thought"
       >
