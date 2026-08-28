@@ -5,6 +5,7 @@ import { EmptyState, ErrorBanner } from "../../components/Feedback";
 import { Button } from "../../components/ui/Button";
 import { ApiError } from "../../services/api";
 import { formatTime } from "../../lib/dates";
+import { formatNumber } from "../../lib/numbers";
 import { useAppTranslation } from "../../hooks/useAppTranslation";
 
 /** Manual synthesis cooldown (mirrors the backend's 30-minute limit). */
@@ -45,7 +46,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
   const buttonLabel = isGenerating
     ? t("documents.synthesizing")
     : onCooldown
-      ? t("documents.cooldownButton", { minutes: minutesLeft })
+      ? t("documents.cooldownButton", { minutes: minutesLeft, formattedMinutes: formatNumber(minutesLeft) })
       : doc
         ? t("documents.resynthesize")
         : t("documents.synthesize");
@@ -61,7 +62,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
       {/* Toolbar: cooldown hint + synthesize button */}
       <div className="flex items-center justify-end gap-3 border-b border-border bg-surface px-4 py-2">
         {onCooldown && (
-          <span className="text-xs text-foreground-muted">{t("documents.cooldownHint", { minutes: minutesLeft })}</span>
+          <span className="text-xs text-foreground-muted">{t("documents.cooldownHint", { minutes: minutesLeft, formattedMinutes: formatNumber(minutesLeft) })}</span>
         )}
         <Button
           size="sm"

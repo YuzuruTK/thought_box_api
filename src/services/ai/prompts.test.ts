@@ -17,6 +17,58 @@ describe("detectPredominantLanguage", () => {
       "Este pensamento também está em português.",
     ])).toBe("pt-BR");
   });
+
+  it("uses the predominant language when English and Portuguese thoughts are mixed", () => {
+    expect(detectPredominantLanguage([
+      "This thought is written in English.",
+      "Another thought in English about the project.",
+      "Este pensamento está em português.",
+    ])).toBe("en");
+  });
+});
+
+describe("buildSynthesisPrompt language propagation", () => {
+  it("requires Portuguese output for Portuguese thoughts", () => {
+    const prompt = buildSynthesisPrompt({
+      boxName: "Projeto",
+      thoughts: [
+        "Quero organizar minhas ideias sobre o projeto.",
+        "Preciso definir os próximos passos da síntese.",
+      ],
+    });
+
+    expect(prompt).toContain("required output language: Brazilian Portuguese (pt-BR)");
+    expect(prompt).toContain("Write BOTH the resume and the structured document entirely in Brazilian Portuguese (pt-BR).");
+    expect(prompt).not.toContain("required output language: English (en)");
+  });
+
+  it("requires English output for English thoughts", () => {
+    const prompt = buildSynthesisPrompt({
+      boxName: "Project",
+      thoughts: [
+        "I want to organize my ideas about the project.",
+        "I need to define the next steps of the synthesis.",
+      ],
+    });
+
+    expect(prompt).toContain("required output language: English (en)");
+    expect(prompt).toContain("Write BOTH the resume and the structured document entirely in English (en).");
+    expect(prompt).not.toContain("required output language: Brazilian Portuguese (pt-BR)");
+  });
+
+  it("selects the predominant language for mixed-language thoughts", () => {
+    const prompt = buildSynthesisPrompt({
+      boxName: "Mixed Box",
+      thoughts: [
+        "This thought is written in English.",
+        "Another thought in English about the project.",
+        "Este pensamento está em português.",
+      ],
+    });
+
+    expect(prompt).toContain("required output language: English (en)");
+    expect(prompt).toContain("the language of the majority of the meaningful content");
+  });
 });
 
 describe("buildSynthesisPrompt", () => {
