@@ -3,8 +3,30 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <title>Thought Box</title>
+    <script>
+      // Theme bootstrap (Issue #22): resolve and apply the theme before the
+      // bundle paints to avoid a flash of the wrong theme (FOUC). Must stay in
+      // sync with ThemeContext (localStorage key + resolution rules).
+      (function () {
+        var mode;
+        try {
+          mode = localStorage.getItem("thoughtbox_theme");
+        } catch (e) {
+          mode = null;
+        }
+        if (mode !== "light" && mode !== "dark") mode = "system";
+        var dark =
+          mode === "dark" ||
+          (mode === "system" &&
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
+        var theme = dark ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

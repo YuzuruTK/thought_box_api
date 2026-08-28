@@ -2,6 +2,7 @@ import type { ComponentProps } from "react";
 
 const variantClasses = {
   danger: "border-danger-border bg-danger-surface text-danger",
+  success: "border-success-border bg-success-surface text-success",
 } as const;
 
 /** Inline banner for user-facing messages. Only variants with real consumers. */

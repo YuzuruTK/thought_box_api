@@ -3,10 +3,54 @@ import type { FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError, getAiSettings, removeAiApiKey, saveAiApiKey, type AiSettings } from "../services/api";
 import { ErrorBanner } from "../components/Feedback";
+import { Alert } from "../components/ui/Alert";
+import { Button } from "../components/ui/Button";
+import { Card } from "../components/ui/Card";
+import { Input } from "../components/ui/Input";
+import { useTheme } from "../features/theme/ThemeContext";
+import type { ThemeMode } from "../features/theme/ThemeContext";
+
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
+
+/** Theme picker: System / Light / Dark, applied live via ThemeContext. */
+function AppearanceSection() {
+  const { mode, setMode } = useTheme();
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-semibold">Appearance</h2>
+      <p className="mt-1 text-sm text-foreground-muted">
+        Choose how Thought Box looks. System follows your operating system setting.
+      </p>
+      <div role="radiogroup" aria-label="Theme" className="mt-4 inline-flex rounded-md border border-border p-1">
+        {THEME_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={mode === option.value}
+            onClick={() => setMode(option.value)}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+              mode === option.value
+                ? "bg-primary text-primary-foreground"
+                : "text-foreground-muted hover:bg-surface-subtle hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
 
 function providerLabel(provider: AiSettings["provider"]) {
   return provider === "byok" ? "Personal OpenRouter" : "Thought Box platform";
 }
+
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AiSettings | null>(null);
@@ -56,93 +100,95 @@ export default function SettingsPage() {
   const keyInvalid = settings?.keyStatus === "invalid";
 
   return (
-    <main className="min-h-dvh bg-neutral-50 text-neutral-900">
+    <main className="min-h-dvh bg-surface-muted text-foreground">
       <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
         <header className="mb-8 flex items-center gap-4">
-          <Link to="/app" className="rounded px-2 py-1 text-sm text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800">← Back</Link>
+          <Link to="/app" className="rounded px-2 py-1 text-sm text-foreground-muted hover:bg-surface-subtle hover:text-foreground">← Back</Link>
           <div>
             <h1 className="text-lg font-semibold tracking-tight">Settings</h1>
-            <p className="text-xs text-neutral-400">AI provider and personal API key</p>
+            <p className="text-xs text-foreground-faint">AI provider and personal API key</p>
           </div>
         </header>
 
         {error && <div className="mb-4"><ErrorBanner message={error} /></div>}
-        {success && <div role="status" className="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">{success}</div>}
+        {success && (
+          <div className="mb-4">
+            <Alert variant="success" role="status">{success}</Alert>
+          </div>
+        )}
 
-        {loading ? <p className="text-sm text-neutral-400">Loading settings…</p> : (
+        {loading ? <p className="text-sm text-foreground-faint">Loading settings…</p> : (
           <div className="space-y-4">
-            <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+            <AppearanceSection />
+
+            <Card className="p-5">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-neutral-400">Current provider</p>
+                  <p className="text-xs font-medium uppercase tracking-wider text-foreground-faint">Current provider</p>
                   <h2 className="mt-1 text-base font-semibold">{providerLabel(settings?.provider ?? "platform")}</h2>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${isPersonal ? "bg-green-50 text-green-700" : "bg-neutral-100 text-neutral-600"}`}>
+                <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${isPersonal ? "bg-success-surface text-success" : "bg-surface-subtle text-foreground-muted"}`}>
                   {isPersonal ? "Personal AI" : "Platform AI"}
                 </span>
               </div>
-              <p className="mt-3 text-sm leading-relaxed text-neutral-600">
+              <p className="mt-3 text-sm leading-relaxed text-foreground-muted">
                 {isPersonal
                   ? "Your requests use your OpenRouter account and its models, credits, and limits. Thought Box stores only an encrypted copy of your key and a masked hint."
                   : "Thought Box provides the AI connection for you. You do not need to create an OpenRouter key to use the platform provider."}
               </p>
               {isPersonal && settings?.key && (
-                <div className="mt-4 flex items-center justify-between rounded-md bg-neutral-50 px-3 py-2 text-sm">
-                  <span className="font-mono text-neutral-700">{settings.key}</span>
-                  <span className={settings.keyStatus === "valid" ? "text-green-600" : "text-amber-600"}>
+                <div className="mt-4 flex items-center justify-between rounded-md bg-surface-muted px-3 py-2 text-sm">
+                  <span className="font-mono text-foreground">{settings.key}</span>
+                  <span className={settings.keyStatus === "valid" ? "text-success" : "text-warning"}>
                     {settings.keyStatus === "valid" ? "Verified" : "Needs attention"}
                   </span>
                 </div>
               )}
-              {keyInvalid && <p className="mt-3 text-xs text-amber-700">This key was rejected by OpenRouter. Add a new key to restore personal AI.</p>}
-            </section>
+              {keyInvalid && <p className="mt-3 text-xs text-warning">This key was rejected by OpenRouter. Add a new key to restore personal AI.</p>}
+            </Card>
 
-            <section className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+            <Card className="p-5">
               <h2 className="text-base font-semibold">{isPersonal ? "Replace your key" : "Use your own OpenRouter key"}</h2>
-              <p className="mt-1 text-sm text-neutral-500">
+              <p className="mt-1 text-sm text-foreground-muted">
                 {isPersonal ? "Enter a new key to replace the current one." : "Bring your own key if you want AI requests billed and rate-limited by your OpenRouter account."}
               </p>
 
               <form onSubmit={handleSave} className="mt-4 space-y-3">
                 <label className="block">
-                  <span className="mb-1 block text-xs font-medium text-neutral-600">OpenRouter API key</span>
-                  <input
+                  <span className="mb-1 block text-xs font-medium text-foreground-muted">OpenRouter API key</span>
+                  <Input
                     type="password"
                     value={key}
                     onChange={(event) => setKey(event.target.value)}
                     placeholder="sk-or-…"
                     autoComplete="off"
                     spellCheck={false}
-                    className="w-full rounded-md border border-neutral-300 px-3 py-2 font-mono text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-400"
+                    className="font-mono"
                   />
                 </label>
-                <button
-                  type="submit"
-                  disabled={saving || !key.trim()}
-                  className="rounded-md bg-neutral-900 px-4 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
-                >
+                <Button type="submit" disabled={saving || !key.trim()}>
                   {saving ? "Verifying…" : isPersonal ? "Replace key" : "Verify and save"}
-                </button>
+                </Button>
               </form>
 
-              <p className="mt-4 text-xs leading-relaxed text-neutral-400">
+              <p className="mt-4 text-xs leading-relaxed text-foreground-faint">
                 The key is sent directly to the Thought Box API over HTTPS, verified against OpenRouter, then encrypted before storage. It is never displayed in full after saving.
               </p>
-            </section>
+            </Card>
 
             {isPersonal && (
-              <section className="rounded-xl border border-red-100 bg-white p-5 shadow-sm">
-                <h2 className="text-base font-semibold text-neutral-900">Remove personal AI</h2>
-                <p className="mt-1 text-sm text-neutral-500">Delete your stored OpenRouter key and switch back to the platform provider.</p>
-                <button
+              <Card className="p-5">
+                <h2 className="text-base font-semibold">Remove personal AI</h2>
+                <p className="mt-1 text-sm text-foreground-muted">Delete your stored OpenRouter key and switch back to the platform provider.</p>
+                <Button
                   type="button"
+                  variant="danger"
                   onClick={() => void handleRemove()}
                   disabled={removing}
-                  className="mt-4 rounded-md border border-red-200 px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {removing ? "Removing…" : "Remove key"}
-                </button>
-              </section>
+                </Button>
+              </Card>
             )}
           </div>
         )}

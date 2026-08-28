@@ -36,6 +36,47 @@
   --color-danger-surface: var(--color-red-50);
   --color-danger-border: var(--color-red-200);
   --color-info: var(--color-blue-600);
+  --color-success: var(--color-green-700);
+  --color-success-surface: var(--color-green-50);
+  --color-success-border: var(--color-green-200);
+  --color-warning: var(--color-amber-700);
+  --color-warning-surface: var(--color-amber-50);
+  --color-warning-border: var(--color-amber-200);
+}
+
+/*
+ * Dark theme (Issue #22). Themes re-point the same semantic tokens —
+ * components never change (see components/ui/README.md rule 4). Applied
+ * via <html data-theme="dark"> by ThemeContext (client/src/features/theme).
+ * Tones shifted to the lighter end of each ramp to keep WCAG contrast on
+ * dark surfaces (audited: see issue #22 a11y notes).
+ */
+[data-theme="dark"] {
+  --color-surface: var(--color-neutral-950);
+  --color-surface-muted: var(--color-neutral-900);
+  --color-surface-subtle: var(--color-neutral-800);
+
+  --color-foreground: var(--color-neutral-50);
+  --color-foreground-muted: var(--color-neutral-400);
+  --color-foreground-faint: var(--color-neutral-600);
+
+  --color-border: var(--color-neutral-800);
+
+  --color-primary: var(--color-neutral-50);
+  --color-primary-hover: var(--color-neutral-300);
+  --color-primary-foreground: var(--color-neutral-950);
+
+  --color-danger: var(--color-red-400);
+  --color-danger-muted: var(--color-red-400);
+  --color-danger-surface: var(--color-red-950);
+  --color-danger-border: var(--color-red-900);
+  --color-info: var(--color-blue-400);
+  --color-success: var(--color-green-400);
+  --color-success-surface: var(--color-green-950);
+  --color-success-border: var(--color-green-900);
+  --color-warning: var(--color-amber-400);
+  --color-warning-surface: var(--color-amber-950);
+  --color-warning-border: var(--color-amber-900);
 }
 
 /* Minimal typography for rendered markdown (no @tailwindcss/typography dep). */
