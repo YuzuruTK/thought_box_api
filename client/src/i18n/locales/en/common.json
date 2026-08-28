@@ -86,6 +86,11 @@
       "light": "Light",
       "dark": "Dark"
     },
+    "language": {
+      "title": "Language",
+      "description": "Choose the language used across the app. The preference is saved in this browser.",
+      "aria": "Language"
+    },
     "ai": {
       "currentProvider": "Current provider",
       "providerPersonal": "Personal OpenRouter",

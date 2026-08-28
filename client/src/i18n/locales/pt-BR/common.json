@@ -86,6 +86,11 @@
       "light": "Claro",
       "dark": "Escuro"
     },
+    "language": {
+      "title": "Idioma",
+      "description": "Escolha o idioma usado em todo o aplicativo. A preferência é salva neste navegador.",
+      "aria": "Idioma"
+    },
     "ai": {
       "currentProvider": "Provedor atual",
       "providerPersonal": "OpenRouter pessoal",
