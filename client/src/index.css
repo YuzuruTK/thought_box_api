@@ -19,6 +19,8 @@
   /* Foreground */
   --color-foreground: var(--color-neutral-900);
   --color-foreground-muted: var(--color-neutral-500);
+  /* Needed to keep hover-reveal delete icons / faint placeholders subtle. */
+  --color-foreground-faint: var(--color-neutral-300);
 
   /* Borders */
   --color-border: var(--color-neutral-200);

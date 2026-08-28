@@ -5,6 +5,8 @@ import { z } from "zod";
 import { useAuth } from "../features/auth/AuthContext";
 import { ApiError } from "../services/api";
 import { ErrorBanner } from "../components/Feedback";
+import { Input } from "../components/ui/Input";
+import { Button } from "../components/ui/Button";
 
 // Client-side validation mirroring the backend rules (email format,
 // password >= 8 chars for registration).
@@ -75,69 +77,63 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-neutral-50 px-4">
+    <div className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-neutral-900">Thought Box</h1>
-          <p className="mt-1 text-sm text-neutral-500">Capture ideas. Let AI structure them.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">Thought Box</h1>
+          <p className="mt-1 text-sm text-foreground-muted">Capture ideas. Let AI structure them.</p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm"
+          className="space-y-4 rounded-xl border border-border bg-surface p-6 shadow-sm"
         >
           <div>
-            <label htmlFor="email" className="mb-1 block text-xs font-medium text-neutral-600">
+            <label htmlFor="email" className="mb-1 block text-xs font-medium text-foreground-muted">
               Email
             </label>
-            <input
+            <Input
               id="email"
               type="email"
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-400"
               placeholder="you@example.com"
             />
-            {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
+            {fieldErrors.email && <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>}
           </div>
 
           <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-medium text-neutral-600">
+            <label htmlFor="password" className="mb-1 block text-xs font-medium text-foreground-muted">
               Password
             </label>
-            <input
+            <Input
               id="password"
               type="password"
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-400"
               placeholder={mode === "register" ? "At least 8 characters" : ""}
             />
             {fieldErrors.password && (
-              <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
+              <p className="mt-1 text-xs text-danger">{fieldErrors.password}</p>
             )}
           </div>
 
           {serverError && <ErrorBanner message={serverError} />}
 
-          <button
-            type="submit"
-            disabled={pending}
-            className="w-full rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50"
-          >
+          <Button type="submit" disabled={pending} className="w-full">
             {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
-          </button>
+          </Button>
 
-          <div className="text-center text-xs text-neutral-500">
+          <div className="text-center text-xs text-foreground-muted">
             {mode === "login" ? (
               <>
                 New here?{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("register")}
-                  className="font-medium text-neutral-800 underline underline-offset-2 hover:text-black"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-foreground"
                 >
                   Register
                 </button>
@@ -148,7 +144,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => switchMode("login")}
-                  className="font-medium text-neutral-800 underline underline-offset-2 hover:text-black"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-foreground"
                 >
                   Log in
                 </button>

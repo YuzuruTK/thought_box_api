@@ -30,46 +30,46 @@ export default function AppPage() {
   }, [boxesQuery.isPending, selectedBoxId, selectedBox, navigate]);
 
   return (
-    <div className="flex h-dvh flex-col bg-neutral-50 text-neutral-900">
-      <header className="border-b border-neutral-200 bg-white px-4 py-2.5 md:px-6">
+    <div className="flex h-dvh flex-col bg-surface-muted text-foreground">
+      <header className="border-b border-border bg-surface px-4 py-2.5 md:px-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2">
             <Link
               to="/app"
-              className="shrink-0 rounded px-1.5 py-1 text-xs text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800"
+              className="shrink-0 rounded px-1.5 py-1 text-xs text-foreground-muted hover:bg-surface-subtle hover:text-foreground"
             >
               ← All boxes
             </Link>
-            <h1 className="truncate text-sm font-semibold tracking-tight text-neutral-900">
+            <h1 className="truncate text-sm font-semibold tracking-tight text-foreground">
               {selectedBox?.name ?? ""}
             </h1>
           </div>
-          <span className="shrink-0 text-[11px] text-neutral-400">auto hourly</span>
+          <span className="shrink-0 text-[11px] text-foreground-muted">auto hourly</span>
         </div>
       </header>
 
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         {/* Thoughts pane */}
-        <section className="flex h-[45vh] min-h-0 flex-col border-b border-neutral-200 bg-white md:h-auto md:w-1/2 md:border-b-0 md:border-r">
-          <div className="px-4 pt-3 pb-0 text-[11px] font-medium uppercase tracking-wider text-neutral-400 md:px-6">
+        <section className="flex h-[45vh] min-h-0 flex-col border-b border-border bg-surface md:h-auto md:w-1/2 md:border-b-0 md:border-r">
+          <div className="px-4 pt-3 pb-0 text-[11px] font-medium uppercase tracking-wider text-foreground-muted md:px-6">
             Thoughts
           </div>
           {selectedBox ? (
             <ThoughtsPanel key={`thoughts-${selectedBox.id}`} boxId={selectedBox.id} />
           ) : (
-            <p className="p-4 text-sm text-neutral-400">Select a box.</p>
+            <p className="p-4 text-sm text-foreground-muted">Select a box.</p>
           )}
         </section>
 
         {/* Document pane */}
         <section className="flex min-h-0 flex-1 flex-col">
-          <div className="px-4 pt-3 pb-0 text-[11px] font-medium uppercase tracking-wider text-neutral-400 md:px-6">
+          <div className="px-4 pt-3 pb-0 text-[11px] font-medium uppercase tracking-wider text-foreground-muted md:px-6">
             Document
           </div>
           {selectedBox ? (
             <DocumentPanel key={`document-${selectedBox.id}`} boxId={selectedBox.id} />
           ) : (
-            <p className="p-4 text-sm text-neutral-400">Select a box.</p>
+            <p className="p-4 text-sm text-foreground-muted">Select a box.</p>
           )}
         </section>
       </div>
