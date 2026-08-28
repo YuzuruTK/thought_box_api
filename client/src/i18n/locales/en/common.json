@@ -1,0 +1,131 @@
+{
+  "common": {
+    "brand": "Thought Box",
+    "back": "← Back",
+    "allBoxes": "← All boxes",
+    "logOut": "Log out",
+    "genericError": "Something went wrong. Please try again."
+  },
+  "app": {
+    "autoHourly": "auto hourly",
+    "thoughts": "Thoughts",
+    "document": "Document",
+    "selectBox": "Select a box."
+  },
+  "auth": {
+    "tagline": "Capture ideas. Let AI structure them.",
+    "email": "Email",
+    "emailPlaceholder": "you@example.com",
+    "password": "Password",
+    "passwordRegisterPlaceholder": "At least 8 characters",
+    "logIn": "Log in",
+    "createAccount": "Create account",
+    "pleaseWait": "Please wait…",
+    "newHere": "New here?",
+    "register": "Register",
+    "alreadyHaveAccount": "Already have an account?",
+    "validation": {
+      "invalidEmail": "Enter a valid email address.",
+      "passwordRequired": "Password is required.",
+      "passwordMinLength": "Password must be at least 8 characters."
+    }
+  },
+  "boxes": {
+    "loading": "Loading boxes…",
+    "loadError": "Could not load your boxes.",
+    "createError": "Could not create the box. Try again.",
+    "deleteError": "Could not delete the box. Try again.",
+    "deleteConfirm": "Delete \"{{name}}\"? Its generated documents will be removed.",
+    "newBox": "New Box",
+    "namePlaceholder": "Box name",
+    "newNameAria": "New box name",
+    "enterHint": "Enter to create · Esc to cancel",
+    "noSummary": "No summary yet.",
+    "thoughtCount_one": "{{count}} thought",
+    "thoughtCount_other": "{{count}} thoughts",
+    "created": "Created {{date}}",
+    "edited": "Edited {{date}}",
+    "deleteTitle": "Delete {{name}}",
+    "sortCreated": "Created",
+    "sortEdited": "Last edited",
+    "sortDescending": "Descending",
+    "sortAscending": "Ascending",
+    "sortDescendingAria": "Sort descending",
+    "sortAscendingAria": "Sort ascending"
+  },
+  "thoughts": {
+    "loading": "Loading thoughts…",
+    "saveError": "Could not save that thought. Try again.",
+    "emptyTitle": "No thoughts yet.",
+    "emptyHint": "Type your first idea below and press Enter. e.g. \"Player is a courier.\"",
+    "placeholder": "Type a thought, press Enter…",
+    "newAria": "New thought",
+    "deleteTitle": "Delete thought"
+  },
+  "documents": {
+    "loading": "Loading…",
+    "synthesizing": "Synthesizing…",
+    "synthesize": "Synthesize",
+    "resynthesize": "Re-synthesize",
+    "cooldownButton": "Synthesize · {{minutes}}m",
+    "cooldownHint": "Available in {{minutes}} min",
+    "footer": "Synthesized {{time}} · {{model}}",
+    "emptyTitle": "No synthesized document yet.",
+    "emptyHint": "Click \"Synthesize\" to blend your thoughts into a brief resume and a structured project summary."
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "AI provider and personal API key",
+    "loading": "Loading settings…",
+    "loadError": "Could not load AI settings.",
+    "appearance": {
+      "title": "Appearance",
+      "description": "Choose how Thought Box looks. System follows your operating system setting.",
+      "aria": "Theme",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    },
+    "ai": {
+      "currentProvider": "Current provider",
+      "providerPersonal": "Personal OpenRouter",
+      "providerPlatform": "Thought Box platform",
+      "personalAiBadge": "Personal AI",
+      "platformAiBadge": "Platform AI",
+      "personalDescription": "Your requests use your OpenRouter account and its models, credits, and limits. Thought Box stores only an encrypted copy of your key and a masked hint.",
+      "platformDescription": "Thought Box provides the AI connection for you. You do not need to create an OpenRouter key to use the platform provider.",
+      "keyVerified": "Verified",
+      "keyNeedsAttention": "Needs attention",
+      "keyInvalidWarning": "This key was rejected by OpenRouter. Add a new key to restore personal AI.",
+      "replaceKeyTitle": "Replace your key",
+      "addKeyTitle": "Use your own OpenRouter key",
+      "replaceKeyDescription": "Enter a new key to replace the current one.",
+      "addKeyDescription": "Bring your own key if you want AI requests billed and rate-limited by your OpenRouter account.",
+      "keyLabel": "OpenRouter API key",
+      "verifying": "Verifying…",
+      "replaceKey": "Replace key",
+      "verifyAndSave": "Verify and save",
+      "keySecurityNote": "The key is sent directly to the Thought Box API over HTTPS, verified against OpenRouter, then encrypted before storage. It is never displayed in full after saving.",
+      "removeTitle": "Remove personal AI",
+      "removeDescription": "Delete your stored OpenRouter key and switch back to the platform provider.",
+      "removing": "Removing…",
+      "removeKey": "Remove key",
+      "removeConfirm": "Remove your personal OpenRouter key? Thought Box will use the platform provider again.",
+      "saveSuccess": "Your OpenRouter key was verified and saved securely.",
+      "removeSuccess": "Your personal key was removed. Thought Box is using the platform provider.",
+      "saveError": "Could not save the OpenRouter key.",
+      "removeError": "Could not remove the OpenRouter key."
+    }
+  },
+  "errors": {
+    "network": "Could not reach the server. Check your connection and try again.",
+    "400": "That request was invalid. Please check your input and try again.",
+    "401": "Your session has expired. Please log in again.",
+    "404": "That item no longer exists.",
+    "409": "That item already exists.",
+    "429": "That action is on cooldown. Please try again in a moment.",
+    "500": "Something went wrong on our end. Please try again.",
+    "502": "The AI provider could not be reached. Please try again in a moment.",
+    "504": "The AI request took too long. Please try again in a moment."
+  }
+}
