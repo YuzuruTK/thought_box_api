@@ -26,6 +26,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
   const rawDocs = docsQuery.data ?? [];
   const doc = rawDocs.find((d) => d.type === "document");
   const summaryResume = rawDocs.find((d) => d.type === "summary");
+  const metadata = summaryResume?.metadata ?? null;
 
   // Cooldown is driven by the most recent regeneration (either row).
   const lastSynth = doc ? new Date(doc.updatedAt).getTime() : 0;
@@ -89,7 +90,43 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
                 <hr className="mb-5 border-border" />
               </>
             )}
+            {metadata?.coreTheme && (
+              <section className="mb-5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+                  {t("documents.coreTheme")}
+                </h3>
+                <p className="mt-1 text-sm font-medium text-foreground">{metadata.coreTheme}</p>
+              </section>
+            )}
+            {metadata?.confidence !== null && metadata?.confidence !== undefined && (
+              <section className="mb-5">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+                  {t("documents.confidence")}
+                </h3>
+                <p className="mt-1 text-sm text-foreground">
+                  {formatNumber(Math.round(metadata.confidence * 100))}%{" "}
+                  <span className="text-foreground-muted">
+                    ({metadata.confidence >= 0.6 ? t("documents.confidenceHigh") : t("documents.confidenceLow")})
+                  </span>
+                </p>
+              </section>
+            )}
             <Markdown content={doc.content} />
+            {metadata && metadata.questions.length > 0 && (
+              <section
+                aria-label={t("documents.reflectionQuestions")}
+                className="mt-8 rounded-lg border border-border p-4"
+              >
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-foreground-muted">
+                  {t("documents.reflectionQuestions")}
+                </h3>
+                <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm leading-snug text-foreground">
+                  {metadata.questions.map((question, index) => (
+                    <li key={index}>{question}</li>
+                  ))}
+                </ol>
+              </section>
+            )}
             <footer className="mt-8 border-t border-border pt-3 text-[11px] text-foreground-muted">
               {t("documents.footer", { time: formatTime(doc.updatedAt), model: doc.model })}
             </footer>

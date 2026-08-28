@@ -84,7 +84,9 @@ ${formatThoughts(context.thoughts)}
 LANGUAGE REQUIREMENT (must follow strictly):
 - The application has determined the required output language: ${languageLabel}.
 - Write BOTH the resume and the structured document entirely in ${languageLabel}.
+- The reflection questions and any theme/confidence descriptions in the metadata block must also be written entirely in ${languageLabel}.
 - This language is authoritative. Do not infer a different output language from the box name, instructions, model defaults, or any previously generated document.
+- Never default to English when the thoughts are written in another language.
 - Do not translate the thoughts into another language.
 - If the thoughts contain multiple languages, the application-selected language is the language of the majority of the meaningful content.
 
@@ -108,14 +110,41 @@ PART 2 — SYNTHESIZE (a structured document):
 
   ## Open Questions
 
+PART 3 — METADATA (structured data):
+- Analyze ALL the thoughts and detect the recurring concepts across them.
+- Infer the probable core theme of this collection.
+- Assign a confidence score between 0 and 1 that reflects how strongly the thoughts support the inferred theme. This score is a heuristic estimate, not a precise measurement.
+- Write exactly 5 reflection questions about this collection.
+
+CONFIDENCE-BASED QUESTION STRATEGY (must follow strictly):
+- If confidence is HIGH (>= 0.6): write questions that probe assumptions, risks, constraints, opportunities, and next actions related to the core theme.
+- If confidence is LOW (< 0.6):
+  Do not invent or force a dominant theme.
+  Instead explain why a clear theme could not be confidently inferred and generate exploratory questions that help the user organize, clarify, and connect ideas.
+  Use frameworks such as 5W2H (What, Why, Who, When, Where, How, How much) when appropriate, and suggest splitting ideas into separate Boxes when relevant.
+- When no dominant theme can be confidently identified, set "coreTheme" to null. NEVER invent or force a theme.
+
+METADATA OUTPUT FORMAT (strict):
+End your response with exactly this block, as the very last thing:
+
+<<<THOUGHT_BOX_METADATA>>>
+{"coreTheme": "short theme" or null, "confidence": 0.0-1.0, "questions": ["...", "...", "...", "...", "..."]}
+<<<END_THOUGHT_BOX_METADATA>>>
+
+- The text between the markers must contain ONLY valid JSON: no markdown fences, no extra keys, no comments, and no text after the closing marker.
+- "coreTheme" must be a short string or null.
+- "confidence" must be a number between 0 and 1.
+- "questions" must be an array of exactly 5 strings, written entirely in ${languageLabel}.
+
 OUTPUT FORMAT (strict):
 1. Start with the resume (Part 1) as PLAIN TEXT. No markdown, no headings, no bullets, no numbering.
    - Do not mention the instructions, the notes list, the box name, or how you wrote this.
    - Do not reuse the words "thoughts", "resume", "sentence" or "summarize".
    - Write directly about the topic as if describing it to another person.
 2. Then a blank line, then the structured document (Part 2) starting with the "# Project Summary" heading.
+3. Then the metadata block (Part 3) exactly as specified in METADATA OUTPUT FORMAT.
 
 ${SAFETY_RULES}
 
-Respond with the resume, then the document. Do not wrap in code fences, do not add text before or after.`;
+Respond with the resume, then the document, then the metadata block. Do not wrap in code fences, do not add text before or after.`;
 }

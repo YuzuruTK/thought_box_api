@@ -71,7 +71,12 @@
     "cooldownHint": "Disponível em {{minutes}} min",
     "footer": "Sintetizado em {{time}} · {{model}}",
     "emptyTitle": "Nenhum documento sintetizado ainda.",
-    "emptyHint": "Clique em \"Sintetizar\" para combinar seus pensamentos em um breve resumo e um resumo estruturado do projeto."
+    "emptyHint": "Clique em \"Sintetizar\" para combinar seus pensamentos em um breve resumo e um resumo estruturado do projeto.",
+    "coreTheme": "Tema central",
+    "confidence": "Confiança",
+    "confidenceHigh": "alta",
+    "confidenceLow": "baixa",
+    "reflectionQuestions": "Perguntas de reflexão"
   },
   "settings": {
     "title": "Configurações",

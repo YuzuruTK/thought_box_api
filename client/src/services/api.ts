@@ -29,6 +29,16 @@ export interface Thought {
   updatedAt: string;
 }
 
+/** Synthesis metadata produced by the AI (heuristic confidence, optional theme). */
+export interface SynthesisMetadata {
+  /** Dominant theme, or null when none could be confidently identified. */
+  coreTheme: string | null;
+  /** Heuristic estimate in [0, 1] — NOT a precise measurement. */
+  confidence: number | null;
+  /** One or more non-empty reflection questions (typically 5). */
+  questions: string[];
+}
+
 export interface GeneratedDocument {
   id: number;
   boxId: number;
@@ -36,6 +46,7 @@ export interface GeneratedDocument {
   title: string;
   content: string;
   model: string;
+  metadata: SynthesisMetadata | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -224,9 +235,40 @@ export function deleteThought(id: number): Promise<void> {
 // Generated documents (blended synthesis: resume + structured document)
 // ---------------------------------------------------------------------------
 
+const MAX_QUESTIONS = 10;
+
+/** Safely parse the raw metadata JSON of a generated document. */
+function parseMetadata(raw: string | null | undefined): SynthesisMetadata | null {
+  if (!raw) return null;
+  try {
+    const obj = JSON.parse(raw) as Record<string, unknown>;
+    const coreTheme =
+      typeof obj.coreTheme === "string" && obj.coreTheme.trim().length > 0
+        ? obj.coreTheme.trim()
+        : null;
+    const confidence =
+      typeof obj.confidence === "number" && Number.isFinite(obj.confidence)
+        ? Math.min(1, Math.max(0, obj.confidence))
+        : null;
+    const questions = Array.isArray(obj.questions)
+      ? obj.questions
+          .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
+          .map((q) => q.trim())
+          .slice(0, MAX_QUESTIONS)
+      : [];
+    if (coreTheme === null && confidence === null && questions.length === 0) return null;
+    return { coreTheme, confidence, questions };
+  } catch {
+    return null;
+  }
+}
+
+/** Wire format: metadata is still a raw JSON string before parsing. */
+type RawGeneratedDocument = Omit<GeneratedDocument, "metadata"> & { metadata: string | null };
+
 export async function listDocuments(boxId: number): Promise<GeneratedDocument[]> {
-  const data = await request<{ documents: GeneratedDocument[] }>(`/api/boxes/${boxId}/documents`);
-  return data.documents;
+  const data = await request<{ documents: RawGeneratedDocument[] }>(`/api/boxes/${boxId}/documents`);
+  return data.documents.map((doc) => ({ ...doc, metadata: parseMetadata(doc.metadata) }));
 }
 
 export function generateDocument(boxId: number): Promise<{ status: string }> {
