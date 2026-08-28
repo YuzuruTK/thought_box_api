@@ -39,6 +39,15 @@ export interface GeneratedDocument {
   updatedAt: string;
 }
 
+export type AiProvider = "platform" | "byok";
+export type ApiKeyStatus = "valid" | "invalid" | "unverified";
+
+export interface AiSettings {
+  provider: AiProvider;
+  key: string | null;
+  keyStatus: ApiKeyStatus | null;
+}
+
 // ---------------------------------------------------------------------------
 // Error handling
 // ---------------------------------------------------------------------------
@@ -153,6 +162,25 @@ export function login(email: string, password: string): Promise<LoginResponse> {
 }
 
 // ---------------------------------------------------------------------------
+// AI settings / BYOK
+// ---------------------------------------------------------------------------
+
+export function getAiSettings(): Promise<AiSettings> {
+  return request("/api/settings/ai");
+}
+
+export function saveAiApiKey(key: string): Promise<AiSettings> {
+  return request("/api/settings/ai/key", {
+    method: "POST",
+    body: JSON.stringify({ key }),
+  });
+}
+
+export function removeAiApiKey(): Promise<AiSettings> {
+  return request("/api/settings/ai/key", { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
 // Boxes
 // ---------------------------------------------------------------------------
 
@@ -203,4 +231,3 @@ export async function listDocuments(boxId: number): Promise<GeneratedDocument[]>
 export function generateDocument(boxId: number): Promise<{ status: string }> {
   return request(`/api/boxes/${boxId}/generate-document`, { method: "POST", body: "" });
 }
-

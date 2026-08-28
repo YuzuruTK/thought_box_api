@@ -7,6 +7,7 @@ import thoughts from "./routes/thoughts";
 import tags from "./routes/tags";
 import boxes from "./routes/boxes";
 import documents from "./routes/documents";
+import settings from "./routes/settings";
 import type { Env } from "./env";
 import { RethinkService } from "./services/rethinkService";
 
@@ -25,6 +26,7 @@ app.route("/api/thoughts", thoughts);
 app.route("/api/tags", tags);
 app.route("/api/boxes", boxes);
 app.route("/api/documents", documents);
+app.route("/api/settings", settings);
 
 // 404 fallback
 app.notFound((c) => c.json({ error: "Not found." }, 404));

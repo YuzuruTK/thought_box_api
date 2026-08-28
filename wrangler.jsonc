@@ -4,9 +4,6 @@
   "main": "src/index.ts",
   "compatibility_date": "2025-06-01",
   // D1 database binding.
-  // Created with:
-  //   npx wrangler d1 create thought_box
-  // then paste the returned database_id below.
   "d1_databases": [
     {
       "binding": "DB",
@@ -15,22 +12,24 @@
       "migrations_dir": "drizzle"
     }
   ],
-  // JWT signing secret. Set with:
-  //   npx wrangler secret put JWT_SECRET
-  // OpenRouter API key. Set with:
-  //   npx wrangler secret put OPENROUTER_API_KEY
-  // For local development, put secrets in `.dev.vars` (see `.dev.vars.example`).
+  // Cloudflare Workers AI binding. The model is configured below.
+  "ai": {
+    "binding": "AI"
+  },
+  // JWT signing secret and provider secrets are configured with `wrangler secret put`.
+  // For local development, put them in `.dev.vars`.
   "vars": {
-    // OpenRouter model used for AI generation (configurable, not hardcoded).
-    "AI_MODEL": "google/gemma-4-31b-it:free"
+    // Primary platform model. Qwen3 30B A3B has a 32K context window and
+    // comparatively low Neuron consumption for its capability level.
+    "WORKERS_AI_MODEL": "@cf/ibm-granite/granite-4.0-h-micro",
+    // Direct Google Gemini standby model.
+    "GEMINI_MODEL": "gemini-3.7-flash"
   },
   // Hourly cron that refreshes stale box summaries.
   "triggers": {
     "crons": ["0 * * * *"]
   },
   // Static assets for the web client (built from client/ with Vite).
-  // API paths are handled by the Worker first; every other GET request that
-  // doesn't match an asset falls back to index.html (single-page application).
   "assets": {
     "directory": "./client/dist",
     "not_found_handling": "single-page-application",
