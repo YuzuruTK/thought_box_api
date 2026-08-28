@@ -8,6 +8,7 @@ import { ApiError } from "../../services/api";
 import type { Box } from "../../services/api";
 import { ErrorBanner } from "../../components/Feedback";
 import { formatShortDate } from "../../lib/dates";
+import { formatNumber } from "../../lib/numbers";
 import { useAppTranslation } from "../../hooks/useAppTranslation";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -241,7 +242,7 @@ function BoxCard({
       <button type="button" onClick={onSelect} className="flex min-h-0 flex-1 flex-col text-left">
         <h3 className="truncate pr-6 text-sm font-medium text-foreground">{box.name}</h3>
         <p className="mt-0.5 text-[11px] text-foreground-muted">
-          {t("boxes.thoughtCount", { count: box.thoughtCount })}
+          {t("boxes.thoughtCount", { count: box.thoughtCount, formattedCount: formatNumber(box.thoughtCount) })}
         </p>
 
         {/* Summary preview — short plain-text resume of the cached AI summary */}
