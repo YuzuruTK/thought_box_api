@@ -1,12 +1,13 @@
 import type { ComponentProps } from "react";
 
-type Variant = "primary" | "outline" | "ghost";
+type Variant = "primary" | "outline" | "ghost" | "danger";
 type Size = "sm" | "md";
 
 const variantClasses: Record<Variant, string> = {
   primary: "bg-primary text-primary-foreground hover:bg-primary-hover",
   outline: "border border-border bg-surface text-foreground-muted hover:bg-surface-muted",
   ghost: "text-foreground-muted hover:bg-surface-subtle hover:text-foreground",
+  danger: "border border-danger-border bg-surface text-danger hover:bg-danger-surface",
 };
 
 const sizeClasses: Record<Size, string> = {
