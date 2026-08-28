@@ -107,6 +107,12 @@ export const generatedDocuments = sqliteTable("generated_documents", {
     .references(() => users.id, { onDelete: "cascade" }),
   /** 'summary' | 'document' */
   type: text("type").notNull(),
+  /**
+   * JSON-encoded synthesis metadata ({ coreTheme, confidence, questions })
+   * attached to the 'summary' row. Null for legacy rows and when metadata
+   * parsing failed — the UI must handle its absence gracefully.
+   */
+  metadata: text("metadata"),
   /** Which provider generated this doc: 'platform' | 'byok' | 'workers-ai' (provenance metadata). */
   generationProvider: text("generation_provider"),
   title: text("title").notNull(),

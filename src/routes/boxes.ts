@@ -30,6 +30,8 @@ function serializeDocument(doc: GeneratedDocument) {
     title: doc.title,
     content: doc.content,
     model: doc.model,
+    /** Raw JSON string of synthesis metadata ({coreTheme, confidence, questions}) or null. */
+    metadata: doc.metadata,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

@@ -25,6 +25,7 @@ export class DocumentService {
     content: string,
     model: string,
     generationProvider?: string,
+    metadata?: string | null,
   ): Promise<GeneratedDocument> {
     const [existing] = await this.db
       .select({ id: generatedDocuments.id })
@@ -40,7 +41,16 @@ export class DocumentService {
     if (existing) {
       const [updated] = await this.db
         .update(generatedDocuments)
-        .set({ title, content, model, updatedAt: new Date(), ...(generationProvider ? { generationProvider } : {}) })
+        .set({
+          title,
+          content,
+          model,
+          updatedAt: new Date(),
+          ...(generationProvider ? { generationProvider } : {}),
+          // Written unconditionally (including null) so a failed metadata
+          // parse clears stale metadata from a previous synthesis.
+          ...(metadata !== undefined ? { metadata } : {}),
+        })
         .where(eq(generatedDocuments.id, existing.id))
         .returning();
       if (!updated) {
@@ -51,7 +61,16 @@ export class DocumentService {
 
     const [created] = await this.db
       .insert(generatedDocuments)
-      .values({ userId, boxId, type, title, content, model, ...(generationProvider ? { generationProvider } : {}) })
+      .values({
+        userId,
+        boxId,
+        type,
+        title,
+        content,
+        model,
+        ...(generationProvider ? { generationProvider } : {}),
+        ...(metadata !== undefined ? { metadata } : {}),
+      })
       .returning();
     if (!created) {
       throw new Error("Failed to create generated document.");

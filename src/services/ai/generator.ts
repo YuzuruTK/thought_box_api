@@ -7,9 +7,10 @@ import { ValidationError, CooldownError } from "../errors";
 import { AiProviderError, AiTimeoutError } from "./openrouter";
 import { ProviderResolver, createResolverDeps } from "./providerResolver";
 import { buildSynthesisPrompt, detectPredominantLanguage } from "./prompts";
+import { parseSynthesisMetadata } from "./synthesisMetadata";
 import { AiUsageService, estimateTokens } from "./usageService";
 
-const SYNTHESIS_MAX_TOKENS = 1_000;
+const SYNTHESIS_MAX_TOKENS = 2_000;
 const SYNTHESIS_COOLDOWN_MS = 30 * 60 * 1_000;
 const MAX_THOUGHTS_PER_PROMPT = 200;
 
@@ -65,8 +66,12 @@ export class AiGenerator {
       throw error;
     }
 
-    const { resume, document, documentTitle } = splitSynthesisContent(result.content);
-    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, result.model, kind);
+    // The AI appends a delimited metadata block after the document; extract
+    // and sanitize it first so it never leaks into the persisted content.
+    const parsed = parseSynthesisMetadata(result.content);
+    const { resume, document, documentTitle } = splitSynthesisContent(parsed.content);
+    const metadataJson = parsed.metadata ? JSON.stringify(parsed.metadata) : null;
+    await this.documents.upsert(userId, boxId, "summary", `${box.name} — Summary`, resume, result.model, kind, metadataJson);
     await this.documents.upsert(userId, boxId, "document", documentTitle, document, result.model, kind);
     await this.recordSuccess(userId, prompt, result.content, result.model, kind, resume, document);
   }

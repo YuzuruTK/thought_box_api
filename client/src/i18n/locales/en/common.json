@@ -71,7 +71,12 @@
     "cooldownHint": "Available in {{minutes}} min",
     "footer": "Synthesized {{time}} · {{model}}",
     "emptyTitle": "No synthesized document yet.",
-    "emptyHint": "Click \"Synthesize\" to blend your thoughts into a brief resume and a structured project summary."
+    "emptyHint": "Click \"Synthesize\" to blend your thoughts into a brief resume and a structured project summary.",
+    "coreTheme": "Core theme",
+    "confidence": "Confidence",
+    "confidenceHigh": "high",
+    "confidenceLow": "low",
+    "reflectionQuestions": "Reflection questions"
   },
   "settings": {
     "title": "Settings",

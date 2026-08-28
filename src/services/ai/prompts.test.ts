@@ -111,3 +111,77 @@ describe("buildSynthesisPrompt", () => {
     expect(prompt).toContain("previously generated document");
   });
 });
+
+describe("buildSynthesisPrompt — synthesis metadata", () => {
+  function build(thoughts: string[]): string {
+    return buildSynthesisPrompt({ boxName: "Test Box", thoughts });
+  }
+
+  it("requires the delimited metadata block", () => {
+    const prompt = build(["I keep notes about the API design."]);
+    expect(prompt).toContain("<<<THOUGHT_BOX_METADATA>>>");
+    expect(prompt).toContain("<<<END_THOUGHT_BOX_METADATA>>>");
+    expect(prompt).toContain("METADATA OUTPUT FORMAT");
+    expect(prompt).toContain("ONLY valid JSON");
+  });
+
+  it("requests theme detection with a 0-1 confidence score and exactly 5 questions", () => {
+    const prompt = build(["Thought about the project."]);
+    expect(prompt).toContain("recurring concepts");
+    expect(prompt).toContain("confidence score between 0 and 1");
+    expect(prompt).toContain("exactly 5 reflection questions");
+    expect(prompt).toContain("heuristic estimate, not a precise measurement");
+  });
+
+  it("allows coreTheme to be null instead of forcing a theme", () => {
+    const prompt = build(["Thought about the project."]);
+    expect(prompt).toContain('"coreTheme" to null');
+    expect(prompt).toContain("NEVER invent or force a theme");
+  });
+
+  it("explains the high-confidence question strategy", () => {
+    const prompt = build(["Thought about the project."]);
+    expect(prompt).toContain("If confidence is HIGH (>= 0.6)");
+    expect(prompt).toContain("assumptions, risks, constraints, opportunities, and next actions");
+  });
+
+  it("explains the low-confidence exploratory strategy", () => {
+    const prompt = build(["Thought about the project."]);
+    expect(prompt).toContain("If confidence is LOW (< 0.6)");
+    expect(prompt).toContain("Do not invent or force a dominant theme.");
+    expect(prompt).toContain("5W2H");
+    expect(prompt).toContain("separate Boxes");
+  });
+
+  it("extends the language requirement to the metadata (Portuguese thoughts)", () => {
+    const prompt = build([
+      "Quero organizar minhas ideias sobre o projeto.",
+      "Preciso definir os próximos passos da síntese.",
+    ]);
+    expect(prompt).toContain(
+      "The reflection questions and any theme/confidence descriptions in the metadata block must also be written entirely in Brazilian Portuguese (pt-BR).",
+    );
+    expect(prompt).toContain('"questions" must be an array of exactly 5 strings, written entirely in Brazilian Portuguese (pt-BR).');
+    expect(prompt).toContain("Never default to English");
+  });
+
+  it("extends the language requirement to the metadata (English thoughts)", () => {
+    const prompt = build([
+      "I want to organize my ideas about the project.",
+      "I need to define the next steps of the synthesis.",
+    ]);
+    expect(prompt).toContain(
+      "The reflection questions and any theme/confidence descriptions in the metadata block must also be written entirely in English (en).",
+    );
+  });
+
+  it("extends the language requirement to the metadata (Spanish thoughts)", () => {
+    const prompt = build([
+      "Quiero organizar mis ideas sobre el proyecto.",
+      "Necesito definir los próximos pasos de la síntesis.",
+    ]);
+    expect(prompt).toContain(
+      "The reflection questions and any theme/confidence descriptions in the metadata block must also be written entirely in Spanish (es).",
+    );
+  });
+});
