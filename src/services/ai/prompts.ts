@@ -13,10 +13,45 @@ SAFETY RULES (must follow strictly):
 - If information is missing or unclear for a section, write exactly: "Insufficient information available."
 - Base every statement only on the provided thoughts.`;
 
+export type SynthesisLanguage = "pt-BR" | "en" | "es";
+
+const LANGUAGE_LABELS: Record<SynthesisLanguage, string> = {
+  "pt-BR": "Brazilian Portuguese (pt-BR)",
+  en: "English (en)",
+  es: "Spanish (es)",
+};
+
+const LANGUAGE_WORDS: Record<SynthesisLanguage, string[]> = {
+  "pt-BR": ["não", "você", "para", "uma", "que", "com", "dos", "das", "do", "da", "no", "na", "em", "os", "as", "um", "eu", "meu", "minha", "meus", "minhas", "está", "são", "como", "por", "sobre", "projeto", "pensamento", "pensamentos", "ideia", "ideias", "preciso", "precisa", "quero", "queremos", "também", "isso", "esse", "essa", "esses", "essas", "porque", "onde", "quando", "hoje", "deve", "devem"],
+  en: ["the", "and", "is", "to", "of", "in", "for", "with", "this", "that", "are", "from", "about", "project", "thought", "thoughts", "idea", "ideas", "need", "needs", "want", "wants", "also", "it", "my", "mine", "your", "you", "because", "where", "when", "today", "should", "must"],
+  es: ["el", "la", "los", "las", "que", "para", "una", "con", "del", "al", "en", "un", "yo", "mi", "mis", "está", "están", "son", "como", "por", "sobre", "proyecto", "pensamiento", "pensamientos", "idea", "ideas", "necesito", "necesita", "quiero", "queremos", "también", "esto", "este", "esta", "estos", "estas", "porque", "donde", "cuando", "hoy", "debe", "deben"],
+};
+
+/**
+ * Detect the predominant language without making another AI call.
+ * Scores are based on language words, so a previous synthesis or the model's
+ * default language cannot influence the result.
+ */
+export function detectPredominantLanguage(thoughts: string[]): SynthesisLanguage {
+  const scores: Record<SynthesisLanguage, number> = { "pt-BR": 0, en: 0, es: 0 };
+  const meaningfulText = thoughts.join(" ").toLocaleLowerCase("pt-BR").normalize("NFC");
+  const words = meaningfulText.match(/[\p{L}]+/gu) ?? [];
+
+  for (const word of words) {
+    for (const language of Object.keys(LANGUAGE_WORDS) as SynthesisLanguage[]) {
+      if (LANGUAGE_WORDS[language].includes(word)) scores[language] += 1;
+    }
+  }
+
+  const ordered = (Object.keys(scores) as SynthesisLanguage[]).sort((a, b) => scores[b] - scores[a]);
+  return ordered[0] ?? "pt-BR";
+}
+
 export interface PromptContext {
   boxName: string;
   boxDescription?: string | null;
   thoughts: string[];
+  language?: SynthesisLanguage;
 }
 
 function formatThoughts(thoughts: string[]): string {
@@ -36,12 +71,22 @@ function formatBoxHeader(context: PromptContext): string {
  *  2. a structured markdown document (# Project Summary) beneath it.
  */
 export function buildSynthesisPrompt(context: PromptContext): string {
+  const language = context.language ?? detectPredominantLanguage(context.thoughts);
+  const languageLabel = LANGUAGE_LABELS[language];
+
   return `You are an assistant that distills and then synthesizes collections of short notes ("thoughts") into a project summary.
 
 ${formatBoxHeader(context)}
 
 Thoughts:
 ${formatThoughts(context.thoughts)}
+
+LANGUAGE REQUIREMENT (must follow strictly):
+- The application has determined the required output language: ${languageLabel}.
+- Write BOTH the resume and the structured document entirely in ${languageLabel}.
+- This language is authoritative. Do not infer a different output language from the box name, instructions, model defaults, or any previously generated document.
+- Do not translate the thoughts into another language.
+- If the thoughts contain multiple languages, the application-selected language is the language of the majority of the meaningful content.
 
 PART 1 — DISTILL (a very brief resume):
 - Identify what this collection of thoughts is about at its core.

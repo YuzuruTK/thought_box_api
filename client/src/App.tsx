@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import LoginPage from "./pages/LoginPage";
 import AppPage from "./pages/AppPage";
+import SettingsPage from "./pages/SettingsPage";
 import { BoxesGrid } from "./features/boxes/BoxesGrid";
 import { ProtectedRoute } from "./routes/ProtectedRoute";
 
@@ -22,6 +23,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <AppPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/app/settings"
+          element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           }
         />

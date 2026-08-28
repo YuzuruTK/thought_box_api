@@ -29,11 +29,12 @@ export class UserSettingsService {
     return row as UserSettings;
   }
 
-  /** Wipe the API key fields, keeping ai_provider (reverts to platform). */
+  /** Wipe the API key fields and revert to platform provider. */
   async clearKey(userId: number): Promise<void> {
     await this.db
       .update(userSettings)
       .set({
+        aiProvider: "platform",
         encryptedApiKey: null,
         apiKeyIv: null,
         apiKeyVersion: null,
