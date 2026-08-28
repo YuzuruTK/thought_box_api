@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "client"
+  ],
   "scripts": {
     "dev": "wrangler dev",
     "dev:api": "wrangler dev",
@@ -33,6 +36,7 @@
     "esbuild@0.18.20": true,
     "esbuild@0.19.12": true,
     "esbuild@0.28.1": true,
+    "esbuild@0.28.2": true,
     "workerd@1.20260820.1": true
   }
 }
