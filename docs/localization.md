@@ -35,6 +35,15 @@ Implementation (`src/services/ai/prompts.ts`):
 
 Test coverage: `src/services/ai/prompts.test.ts` (detection per language, mixed-language predominance, and prompt-level English/Portuguese propagation).
 
+## Localization audit (Phase 5)
+
+Results of the Issue #21 audit on `chore/21-localization-audit`:
+
+- Key parity verified programmatically: 110 keys in `en/common.json` and `pt-BR/common.json`, zero missing/orphan/duplicate/empty values.
+- Every `t()` key referenced in client code resolves against the catalog (including plural base keys such as `boxes.thoughtCount`, resolved via `_one`/`_other` suffixes, and dynamic `errors.<status>` fallbacks).
+- Static scan found no hardcoded user-facing literals in pages, features, components, routes, or lib/services. The only string literal kept intentionally is `placeholder="sk-or-…"` on the API-key input, which is a technical key-format example, not prose.
+- Runtime consistency: all translated consumers share the single i18next instance (`common` namespace), so `changeLanguage` re-renders every translated area at once — no mixed-language screens are possible. `<html lang>` starts as `en` in `index.html` and is corrected by `LanguageProvider` on mount.
+
 ## Future work
 
 - Server-side i18n (translated backend error messages) — separate issue.
