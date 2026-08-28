@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./features/auth/AuthContext";
 import { ThemeProvider } from "./features/theme/ThemeContext";
+import { LanguageProvider } from "./contexts/LanguageContext";
 import "./i18n";
 import App from "./App";
 import { ApiError } from "./services/api";
@@ -26,11 +27,14 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root") as HTMLElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      {/* ThemeProvider sits outside AuthProvider: the theme applies before login. */}
+      {/* ThemeProvider and LanguageProvider sit outside AuthProvider:
+          both apply before login. */}
       <ThemeProvider>
-        <AuthProvider>
-          <App />
-        </AuthProvider>
+        <LanguageProvider>
+          <AuthProvider>
+            <App />
+          </AuthProvider>
+        </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
   </StrictMode>,

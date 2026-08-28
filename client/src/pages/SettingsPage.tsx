@@ -9,6 +9,8 @@ import { Card } from "../components/ui/Card";
 import { Input } from "../components/ui/Input";
 import { useTheme } from "../features/theme/ThemeContext";
 import type { ThemeMode } from "../features/theme/ThemeContext";
+import { useLanguage } from "../contexts/LanguageContext";
+import type { AppLanguage } from "../contexts/LanguageContext";
 import { useAppTranslation } from "../hooks/useAppTranslation";
 
 const THEME_OPTIONS: { value: ThemeMode; labelKey: string }[] = [
@@ -51,6 +53,48 @@ function AppearanceSection() {
 
 function providerLabel(provider: AiSettings["provider"], t: (key: string) => string) {
   return provider === "byok" ? t("settings.ai.providerPersonal") : t("settings.ai.providerPlatform");
+}
+
+
+const LANGUAGE_OPTIONS: { value: AppLanguage; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "pt-BR", label: "Português (Brasil)" },
+];
+
+/**
+ * Language picker: English / Português (Brasil), applied live via
+ * LanguageContext. Labels are shown in their own language (endonyms)
+ * so users can always find their language, matching common practice.
+ */
+function LanguageSection() {
+  const { language, setLanguage } = useLanguage();
+  const { t } = useAppTranslation();
+  return (
+    <Card className="p-5">
+      <h2 className="text-base font-semibold">{t("settings.language.title")}</h2>
+      <p className="mt-1 text-sm text-foreground-muted">
+        {t("settings.language.description")}
+      </p>
+      <div role="radiogroup" aria-label={t("settings.language.aria")} className="mt-4 inline-flex rounded-md border border-border p-1">
+        {LANGUAGE_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={language === option.value}
+            onClick={() => setLanguage(option.value)}
+            className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+              language === option.value
+                ? "bg-primary text-primary-foreground"
+                : "text-foreground-muted hover:bg-surface-subtle hover:text-foreground"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
 }
 
 
@@ -123,6 +167,7 @@ export default function SettingsPage() {
         {loading ? <p className="text-sm text-foreground-faint">{t("settings.loading")}</p> : (
           <div className="space-y-4">
             <AppearanceSection />
+            <LanguageSection />
 
             <Card className="p-5">
               <div className="flex items-start justify-between gap-4">
