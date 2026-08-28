@@ -1,30 +1,41 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useAuth } from "../features/auth/AuthContext";
 import { ApiError } from "../services/api";
+import { useAppTranslation } from "../hooks/useAppTranslation";
 import { ErrorBanner } from "../components/Feedback";
 import { Input } from "../components/ui/Input";
 import { Button } from "../components/ui/Button";
-
-// Client-side validation mirroring the backend rules (email format,
-// password >= 8 chars for registration).
-const loginSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(1, "Password is required."),
-});
-
-const registerSchema = z.object({
-  email: z.string().trim().email("Enter a valid email address."),
-  password: z.string().min(8, "Password must be at least 8 characters."),
-});
 
 type Mode = "login" | "register";
 
 export default function LoginPage() {
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const { t } = useAppTranslation();
+
+  // Client-side validation mirroring the backend rules (email format,
+  // password >= 8 chars for registration). Built per-render so Zod
+  // validation messages follow the active language.
+  const loginSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().trim().email(t("auth.validation.invalidEmail")),
+        password: z.string().min(1, t("auth.validation.passwordRequired")),
+      }),
+    [t],
+  );
+
+  const registerSchema = useMemo(
+    () =>
+      z.object({
+        email: z.string().trim().email(t("auth.validation.invalidEmail")),
+        password: z.string().min(8, t("auth.validation.passwordMinLength")),
+      }),
+    [t],
+  );
 
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
@@ -63,7 +74,7 @@ export default function LoginPage() {
       navigate("/app", { replace: true });
     } catch (error) {
       setServerError(
-        error instanceof ApiError ? error.message : "Something went wrong. Please try again.",
+        error instanceof ApiError ? error.message : t("common.genericError"),
       );
     } finally {
       setPending(false);
@@ -80,8 +91,8 @@ export default function LoginPage() {
     <div className="flex min-h-dvh items-center justify-center bg-surface-muted px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-foreground">Thought Box</h1>
-          <p className="mt-1 text-sm text-foreground-muted">Capture ideas. Let AI structure them.</p>
+          <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("common.brand")}</h1>
+          <p className="mt-1 text-sm text-foreground-muted">{t("auth.tagline")}</p>
         </div>
 
         <form
@@ -90,7 +101,7 @@ export default function LoginPage() {
         >
           <div>
             <label htmlFor="email" className="mb-1 block text-xs font-medium text-foreground-muted">
-              Email
+              {t("auth.email")}
             </label>
             <Input
               id="email"
@@ -98,14 +109,14 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={t("auth.emailPlaceholder")}
             />
             {fieldErrors.email && <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>}
           </div>
 
           <div>
             <label htmlFor="password" className="mb-1 block text-xs font-medium text-foreground-muted">
-              Password
+              {t("auth.password")}
             </label>
             <Input
               id="password"
@@ -113,7 +124,7 @@ export default function LoginPage() {
               autoComplete={mode === "login" ? "current-password" : "new-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={mode === "register" ? "At least 8 characters" : ""}
+              placeholder={mode === "register" ? t("auth.passwordRegisterPlaceholder") : ""}
             />
             {fieldErrors.password && (
               <p className="mt-1 text-xs text-danger">{fieldErrors.password}</p>
@@ -123,30 +134,34 @@ export default function LoginPage() {
           {serverError && <ErrorBanner message={serverError} />}
 
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
+            {pending
+              ? t("auth.pleaseWait")
+              : mode === "login"
+                ? t("auth.logIn")
+                : t("auth.createAccount")}
           </Button>
 
           <div className="text-center text-xs text-foreground-muted">
             {mode === "login" ? (
               <>
-                New here?{" "}
+                {t("auth.newHere")}{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("register")}
                   className="font-medium text-foreground underline underline-offset-2 hover:text-foreground"
                 >
-                  Register
+                  {t("auth.register")}
                 </button>
               </>
             ) : (
               <>
-                Already have an account?{" "}
+                {t("auth.alreadyHaveAccount")}{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("login")}
                   className="font-medium text-foreground underline underline-offset-2 hover:text-foreground"
                 >
-                  Log in
+                  {t("auth.logIn")}
                 </button>
               </>
             )}
