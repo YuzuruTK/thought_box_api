@@ -5,6 +5,7 @@ import { EmptyState, ErrorBanner } from "../../components/Feedback";
 import { Button } from "../../components/ui/Button";
 import { ApiError } from "../../services/api";
 import { formatTime } from "../../lib/dates";
+import { useAppTranslation } from "../../hooks/useAppTranslation";
 
 /** Manual synthesis cooldown (mirrors the backend's 30-minute limit). */
 const COOLDOWN_MS = 30 * 60 * 1_000;
@@ -17,6 +18,7 @@ const COOLDOWN_MS = 30 * 60 * 1_000;
 export function DocumentPanel({ boxId }: { boxId: number }) {
   const docsQuery = useDocuments(boxId);
   const synth = useSynthesize(boxId);
+  const { t } = useAppTranslation();
 
   const [now, setNow] = useState(() => Date.now());
 
@@ -41,12 +43,12 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
   const isGenerating = synth.isPending;
 
   const buttonLabel = isGenerating
-    ? "Synthesizing…"
+    ? t("documents.synthesizing")
     : onCooldown
-      ? `Synthesize · ${minutesLeft}m`
+      ? t("documents.cooldownButton", { minutes: minutesLeft })
       : doc
-        ? "Re-synthesize"
-        : "Synthesize";
+        ? t("documents.resynthesize")
+        : t("documents.synthesize");
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -59,7 +61,7 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
       {/* Toolbar: cooldown hint + synthesize button */}
       <div className="flex items-center justify-end gap-3 border-b border-border bg-surface px-4 py-2">
         {onCooldown && (
-          <span className="text-xs text-foreground-muted">Available in {minutesLeft} min</span>
+          <span className="text-xs text-foreground-muted">{t("documents.cooldownHint", { minutes: minutesLeft })}</span>
         )}
         <Button
           size="sm"
@@ -73,9 +75,9 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
       {/* Blended output: resume on top, structured document below */}
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
         {docsQuery.isPending ? (
-          <p className="text-sm text-foreground-muted">Loading…</p>
+          <p className="text-sm text-foreground-muted">{t("documents.loading")}</p>
         ) : isGenerating && !doc ? (
-          <p className="text-sm text-foreground-muted">Synthesizing…</p>
+          <p className="text-sm text-foreground-muted">{t("documents.synthesizing")}</p>
         ) : doc ? (
           <article className="mx-auto max-w-3xl rounded-lg border border-border bg-surface p-5 shadow-sm md:p-8">
             {summaryResume && summaryResume.content && (
@@ -88,13 +90,13 @@ export function DocumentPanel({ boxId }: { boxId: number }) {
             )}
             <Markdown content={doc.content} />
             <footer className="mt-8 border-t border-border pt-3 text-[11px] text-foreground-muted">
-              Synthesized {formatTime(doc.updatedAt)} · {doc.model}
+              {t("documents.footer", { time: formatTime(doc.updatedAt), model: doc.model })}
             </footer>
           </article>
         ) : (
           <EmptyState
-            title="No synthesized document yet."
-            hint='Click "Synthesize" to blend your thoughts into a brief resume and a structured project summary.'
+            title={t("documents.emptyTitle")}
+            hint={t("documents.emptyHint")}
           />
         )}
       </div>

@@ -6,6 +6,7 @@ import type { Thought } from "../../services/api";
 import { EmptyState, ErrorBanner } from "../../components/Feedback";
 import { Input } from "../../components/ui/Input";
 import { formatTimestamp } from "../../lib/dates";
+import { useAppTranslation } from "../../hooks/useAppTranslation";
 
 interface ThoughtsPanelProps {
   boxId: number;
@@ -21,6 +22,7 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
   const thoughtsQuery = useThoughts(boxId);
   const createThought = useCreateThought(boxId);
   const deleteThought = useDeleteThought(boxId);
+  const { t } = useAppTranslation();
 
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
     try {
       await createThought.mutateAsync(content);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not save that thought. Try again.");
+      setError(err instanceof ApiError ? err.message : t("thoughts.saveError"));
     } finally {
       // Re-focus even if a re-render stole focus during optimistic update.
       inputRef.current?.focus();
@@ -60,11 +62,11 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-6">
         {thoughtsQuery.isPending ? (
-          <p className="text-sm text-foreground-muted">Loading thoughts…</p>
+          <p className="text-sm text-foreground-muted">{t("thoughts.loading")}</p>
         ) : thoughts.length === 0 ? (
           <EmptyState
-            title="No thoughts yet."
-            hint='Type your first idea below and press Enter. e.g. "Player is a courier."'
+            title={t("thoughts.emptyTitle")}
+            hint={t("thoughts.emptyHint")}
           />
         ) : (
           <ul className="space-y-2">
@@ -86,10 +88,10 @@ export function ThoughtsPanel({ boxId }: ThoughtsPanelProps) {
           ref={inputRef}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Type a thought, press Enter…"
+          placeholder={t("thoughts.placeholder")}
           maxLength={10_000}
           autoComplete="off"
-          aria-label="New thought"
+          aria-label={t("thoughts.newAria")}
         />
       </form>
     </div>
@@ -105,6 +107,7 @@ function ThoughtCard({
   onDelete(): void;
   deleting: boolean;
 }) {
+  const { t } = useAppTranslation();
   return (
     <li className="group relative rounded-lg border border-border bg-surface px-4 py-3 shadow-sm">
       <p className="whitespace-pre-wrap pr-6 text-sm leading-relaxed text-foreground">
@@ -116,8 +119,8 @@ function ThoughtCard({
         onClick={onDelete}
         disabled={deleting}
         className="absolute top-2 right-2 hidden rounded p-1 text-xs text-foreground-faint hover:bg-danger-surface hover:text-danger-muted group-hover:block disabled:cursor-wait"
-        title="Delete thought"
-        aria-label="Delete thought"
+        title={t("thoughts.deleteTitle")}
+        aria-label={t("thoughts.deleteTitle")}
       >
         ✕
       </button>

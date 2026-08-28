@@ -1,4 +1,5 @@
 import { friendlyMessage } from "../lib/errors";
+import i18next from "../i18n";
 
 // ---------------------------------------------------------------------------
 // Types mirroring the API response shapes
@@ -108,7 +109,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
   try {
     response = await fetch(path, { ...init, headers });
   } catch {
-    throw new ApiError(0, "Could not reach the server. Check your connection and try again.");
+    throw new ApiError(0, i18next.t("errors.network"));
   }
 
   if (!response.ok) {

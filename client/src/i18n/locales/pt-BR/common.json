@@ -1,0 +1,131 @@
+{
+  "common": {
+    "brand": "Thought Box",
+    "back": "← Voltar",
+    "allBoxes": "← Todas as caixas",
+    "logOut": "Sair",
+    "genericError": "Algo deu errado. Tente novamente."
+  },
+  "app": {
+    "autoHourly": "automático por hora",
+    "thoughts": "Pensamentos",
+    "document": "Documento",
+    "selectBox": "Selecione uma caixa."
+  },
+  "auth": {
+    "tagline": "Capture ideias. Deixe a IA estruturá-las.",
+    "email": "E-mail",
+    "emailPlaceholder": "voce@exemplo.com",
+    "password": "Senha",
+    "passwordRegisterPlaceholder": "Pelo menos 8 caracteres",
+    "logIn": "Entrar",
+    "createAccount": "Criar conta",
+    "pleaseWait": "Aguarde…",
+    "newHere": "Novo por aqui?",
+    "register": "Registrar",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "validation": {
+      "invalidEmail": "Digite um endereço de e-mail válido.",
+      "passwordRequired": "A senha é obrigatória.",
+      "passwordMinLength": "A senha deve ter pelo menos 8 caracteres."
+    }
+  },
+  "boxes": {
+    "loading": "Carregando caixas…",
+    "loadError": "Não foi possível carregar suas caixas.",
+    "createError": "Não foi possível criar a caixa. Tente novamente.",
+    "deleteError": "Não foi possível excluir a caixa. Tente novamente.",
+    "deleteConfirm": "Excluir \"{{name}}\"? Os documentos gerados serão removidos.",
+    "newBox": "Nova caixa",
+    "namePlaceholder": "Nome da caixa",
+    "newNameAria": "Nome da nova caixa",
+    "enterHint": "Enter para criar · Esc para cancelar",
+    "noSummary": "Ainda sem resumo.",
+    "thoughtCount_one": "{{count}} pensamento",
+    "thoughtCount_other": "{{count}} pensamentos",
+    "created": "Criada em {{date}}",
+    "edited": "Editada em {{date}}",
+    "deleteTitle": "Excluir {{name}}",
+    "sortCreated": "Criação",
+    "sortEdited": "Última edição",
+    "sortDescending": "Decrescente",
+    "sortAscending": "Crescente",
+    "sortDescendingAria": "Ordenar decrescente",
+    "sortAscendingAria": "Ordenar crescente"
+  },
+  "thoughts": {
+    "loading": "Carregando pensamentos…",
+    "saveError": "Não foi possível salvar esse pensamento. Tente novamente.",
+    "emptyTitle": "Nenhum pensamento ainda.",
+    "emptyHint": "Digite sua primeira ideia abaixo e pressione Enter. Ex.: \"O jogador é um entregador.\"",
+    "placeholder": "Digite um pensamento, pressione Enter…",
+    "newAria": "Novo pensamento",
+    "deleteTitle": "Excluir pensamento"
+  },
+  "documents": {
+    "loading": "Carregando…",
+    "synthesizing": "Sintetizando…",
+    "synthesize": "Sintetizar",
+    "resynthesize": "Re-sintetizar",
+    "cooldownButton": "Sintetizar · {{minutes}}min",
+    "cooldownHint": "Disponível em {{minutes}} min",
+    "footer": "Sintetizado em {{time}} · {{model}}",
+    "emptyTitle": "Nenhum documento sintetizado ainda.",
+    "emptyHint": "Clique em \"Sintetizar\" para combinar seus pensamentos em um breve resumo e um resumo estruturado do projeto."
+  },
+  "settings": {
+    "title": "Configurações",
+    "subtitle": "Provedor de IA e chave de API pessoal",
+    "loading": "Carregando configurações…",
+    "loadError": "Não foi possível carregar as configurações de IA.",
+    "appearance": {
+      "title": "Aparência",
+      "description": "Escolha como o Thought Box aparece. Sistema segue a configuração do seu sistema operacional.",
+      "aria": "Tema",
+      "system": "Sistema",
+      "light": "Claro",
+      "dark": "Escuro"
+    },
+    "ai": {
+      "currentProvider": "Provedor atual",
+      "providerPersonal": "OpenRouter pessoal",
+      "providerPlatform": "Plataforma Thought Box",
+      "personalAiBadge": "IA pessoal",
+      "platformAiBadge": "IA da plataforma",
+      "personalDescription": "Suas solicitações usam sua conta OpenRouter e seus modelos, créditos e limites. O Thought Box armazena apenas uma cópia criptografada da sua chave e uma dica mascarada.",
+      "platformDescription": "O Thought Box fornece a conexão de IA para você. Você não precisa criar uma chave OpenRouter para usar o provedor da plataforma.",
+      "keyVerified": "Verificada",
+      "keyNeedsAttention": "Precisa de atenção",
+      "keyInvalidWarning": "Esta chave foi rejeitada pelo OpenRouter. Adicione uma nova chave para restaurar a IA pessoal.",
+      "replaceKeyTitle": "Substituir sua chave",
+      "addKeyTitle": "Use sua própria chave OpenRouter",
+      "replaceKeyDescription": "Digite uma nova chave para substituir a atual.",
+      "addKeyDescription": "Traga sua própria chave se quiser que as solicitações de IA sejam cobradas e limitadas pela sua conta OpenRouter.",
+      "keyLabel": "Chave de API OpenRouter",
+      "verifying": "Verificando…",
+      "replaceKey": "Substituir chave",
+      "verifyAndSave": "Verificar e salvar",
+      "keySecurityNote": "A chave é enviada diretamente à API do Thought Box por HTTPS, verificada no OpenRouter e criptografada antes do armazenamento. Nunca é exibida por completo após ser salva.",
+      "removeTitle": "Remover IA pessoal",
+      "removeDescription": "Exclua sua chave OpenRouter armazenada e volte ao provedor da plataforma.",
+      "removing": "Removendo…",
+      "removeKey": "Remover chave",
+      "removeConfirm": "Remover sua chave OpenRouter pessoal? O Thought Box voltará a usar o provedor da plataforma.",
+      "saveSuccess": "Sua chave OpenRouter foi verificada e salva com segurança.",
+      "removeSuccess": "Sua chave pessoal foi removida. O Thought Box está usando o provedor da plataforma.",
+      "saveError": "Não foi possível salvar a chave OpenRouter.",
+      "removeError": "Não foi possível remover a chave OpenRouter."
+    }
+  },
+  "errors": {
+    "network": "Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.",
+    "400": "Essa solicitação era inválida. Verifique os dados e tente novamente.",
+    "401": "Sua sessão expirou. Faça login novamente.",
+    "404": "Esse item não existe mais.",
+    "409": "Esse item já existe.",
+    "429": "Essa ação está em espera. Tente novamente em instantes.",
+    "500": "Algo deu errado do nosso lado. Tente novamente.",
+    "502": "Não foi possível contatar o provedor de IA. Tente novamente em instantes.",
+    "504": "A solicitação de IA demorou demais. Tente novamente em instantes."
+  }
+}
